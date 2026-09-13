@@ -4,7 +4,7 @@
 
 本工程已完成并在 IN2010 真机临时启动 Linux 7.2.5、OP8 专用 DTB、
 Arch Linux ARM、Plasma Mobile、USB ACM/NCM 及 freedreno GPU。
-**目前只验证了 `fastboot boot`；显示休眠、充电、温控和音频回归完成前，不要永久刷写。**
+**目前只验证了 `fastboot boot`；显示休眠、充电和温控回归完成前，不要永久刷写。**
 禁止把 instantnoodlep（8 Pro）或 kebab（8T）的参考 DTB 当成 instantnoodle（8）的成品。
 本工程的构建脚本不读取或修改工程目录外的 Android/recovery 文件。
 
@@ -88,6 +88,14 @@ fastboot boot artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img
 Git 仓库不存放生成的 rootfs、boot.img、固件或编译目录。内核源码快照位于独立公开
 仓库；主仓库跟踪配置片段、rootfs overlay、构建/校验脚本和所有输入提交/哈希。
 第三方固件保持原来源下载，不在本仓库重复分发。
+
+## 真机功能状态
+
+Linux 7.2.5 已验证显示、触摸、freedreno、UFS、USB ACM/NCM、Wi-Fi、
+扬声器 PCM、双声道麦克风 PCM、QCA6390 蓝牙扫描和手电筒。蓝牙初始化服务从
+本机只读 `bluetooth_a` 分区提取与硬件匹配的 `htbtfw20.tlv`/`htnv20.bin`，
+并为缺少出厂公共地址的控制器生成随本次安装保持稳定的本地地址；专有固件不会
+复制进 Git 仓库。蓝牙配对、A2DP 实际播放以及麦克风长期录音仍需继续回归。
 
 ## 当前诊断组件
 

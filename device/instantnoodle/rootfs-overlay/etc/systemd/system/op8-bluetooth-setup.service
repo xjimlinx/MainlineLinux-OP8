@@ -1,0 +1,15 @@
+[Unit]
+Description=Configure OnePlus 8 QCA6390 Bluetooth
+After=local-fs.target systemd-udevd.service
+Before=bluetooth.service
+Wants=bluetooth.service
+ConditionPathExists=/dev/disk/by-partlabel/bluetooth_a
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/op8-bluetooth-setup
+RemainAfterExit=yes
+TimeoutStartSec=45
+
+[Install]
+WantedBy=multi-user.target

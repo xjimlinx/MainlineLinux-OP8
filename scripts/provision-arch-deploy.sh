@@ -92,7 +92,7 @@ fi
 	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \
 	noto-fonts-cjk greetd networkmanager sudo openssh \
 	firefox firefox-i18n-zh-cn konsole pipewire-audio pipewire-pulse \
-	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez
+	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils
 
 # Package removal above intentionally clears generic firmware. Restore the
 # exact pinned device set and its DT-compatible path alias afterward.
@@ -104,7 +104,8 @@ cp -a "$firmware/qcom/sm8250/OnePlus8/." \
 cp -a "$overlay/." "$mountpoint/"
 chown -R root:root "$mountpoint/etc" "$mountpoint/usr/local" "$mountpoint/usr/share/alsa/ucm2/OnePlus"
 chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
-chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root"
+chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root" \
+	"$mountpoint/usr/local/sbin/op8-bluetooth-setup"
 
 user_name=${OP8_USER:-xein}
 if ! "${op8_chroot[@]}" /usr/bin/id "$user_name" >/dev/null 2>&1; then
@@ -130,6 +131,7 @@ sed -i 's/^#zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' "$mountpoint/etc/locale.gen"
 "${op8_chroot[@]}" /bin/bash /usr/bin/locale-gen
 "${op8_chroot[@]}" /usr/bin/systemctl enable \
 	NetworkManager systemd-resolved sshd greetd bluetooth ModemManager upower
+"${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.service
 "${op8_chroot[@]}" /usr/bin/systemctl set-default graphical.target
 ln -sfn ../run/systemd/resolve/stub-resolv.conf "$mountpoint/etc/resolv.conf"
 rm -f "$mountpoint/usr/bin/qemu-aarch64-static"

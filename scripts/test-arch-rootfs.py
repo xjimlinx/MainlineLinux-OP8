@@ -34,11 +34,14 @@ user_name, user_password = user_password_file.read_text().strip().split(':', 1)
 assert len(user_password) == 16 and accounts[user_name].startswith('$')
 assert 'Type: symlink' in debugfs('stat /sbin/init')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service')
+assert 'Type: symlink' in debugfs('stat /etc/systemd/system/multi-user.target.wants/op8-bluetooth-setup.service')
+assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-bluetooth-setup')
 release = (P / 'artifacts/linux-7.2.5-op8/kernel.release').read_text().strip()
 assert 'Type: directory' in debugfs(f'stat /usr/lib/modules/{release}')
 assert 'Type: regular' in debugfs('stat /usr/lib/firmware/qcom/sm8250/OnePlus/a650_zap.mbn')
 for path in ('/usr/bin/firefox', '/usr/bin/konsole', '/usr/bin/plasmashell'):
     assert 'Type: regular' in debugfs(f'stat {path}')
+assert any(line.startswith('bluez-utils ') for line in (out / 'packages.lock').read_text().splitlines())
 
 header = sparse.read_bytes()[:28]
 magic, _, _, _, _, block_size, total_blocks, _, _ = struct.unpack('<I4H4I', header)
@@ -50,6 +53,7 @@ assert boot_manifest['kernel_release'] == release and 'op8.arch=1' in boot_manif
 report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size': raw.stat().st_size,
           'root_password_matches_private_file': 'passed', 'alarm_locked': True,
           'systemd_and_ttyGS0_getty': 'present', 'matching_modules': release,
+          'op8_bluetooth_boot_setup': 'present',
           'arch_boot_image_linkage': 'passed', 'phone_flash': 'NOT PERFORMED'}
 (out / 'test-results.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report, indent=2))

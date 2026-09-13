@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Configure the QCA6390 using the firmware already shipped by this phone.
+set -euo pipefail
+
+partition=/dev/disk/by-partlabel/bluetooth_a
+mountpoint=/run/op8-bluetooth-a
+firmware_dir=/usr/lib/firmware/qca
+
+test -b "$partition"
+install -d -m 0755 "$mountpoint" "$firmware_dir"
+
+cleanup() {
+	mountpoint -q "$mountpoint" && umount "$mountpoint"
+}
+trap cleanup EXIT
+
+mount -o ro,nosuid,nodev,noexec "$partition" "$mountpoint"
+for name in htbtfw20.tlv htnv20.bin; do
+	source_file="$mountpoint/image/$name"
+	test -s "$source_file"
+	install -m 0644 "$source_file" "$firmware_dir/$name"
+done
+cleanup
+trap - EXIT
+
+# Never let a generic linux-firmware file override the phone-matched raw file.
+rm -f "$firmware_dir/htbtfw20.tlv.zst" "$firmware_dir/htnv20.bin.zst"
+
+# The driver may have been cold-plugged before local-fs.target. Re-probe after
+# the stock firmware is in place and before bluetoothd opens the controller.
+modprobe -r hci_uart 2>/dev/null || true
+modprobe hci_uart
+
+hci=
+for _ in $(seq 1 100); do
+	for path in /sys/class/bluetooth/hci*; do
+		if test -e "$path"; then
+			hci=${path##*/}
+			break 2
+		fi
+	done
+	sleep 0.1
+done
+test -n "$hci"
+
+# QCA6390 is exposed as an unconfigured index when its NVM has no usable
+# public address. Use a stable, locally administered address unique to this
+# installation; setting it completes HCI setup and publishes the index.
+machine_id=$(tr -d '\n' </etc/machine-id)
+test -n "$machine_id"
+digest=$(printf 'oneplus8-bluetooth:%s' "$machine_id" | sha256sum)
+hex=${digest%% *}
+address=$(printf '02:%s:%s:%s:%s:%s' \
+	"${hex:0:2}" "${hex:2:2}" "${hex:4:2}" "${hex:6:2}" "${hex:8:2}" | \
+	tr '[:lower:]' '[:upper:]')
+index=${hci#hci}
+
+for _ in $(seq 1 20); do
+	if btmgmt --index "$index" public-addr "$address"; then
+		exit 0
+	fi
+	sleep 0.5
+done
+
+echo "Failed to configure $hci with $address" >&2
+exit 1

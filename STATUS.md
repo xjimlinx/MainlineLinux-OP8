@@ -1,5 +1,24 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-13
 
+## Audio and Bluetooth validation
+
+The 7.2.5 port now includes the missing TFA9872/TFA9874 ASoC driver. Both
+IN2010 amplifiers identify as revision `0x0c74`; the OnePlus8 ALSA card exposes
+three playback and three capture PCMs, and PipeWire exposes the UCM speaker
+sink and stereo microphone source. A low-volume speaker PCM completed, five
+successive microphone opens produced no QDSP6 allocation/open errors, and a
+full-duplex test captured the emitted test tone. Longer recording and physical
+earpiece/headset routing remain unvalidated.
+
+QCA6390 Bluetooth now loads the phone-matched firmware and NVM read-only from
+the stock `bluetooth_a` partition. Because this NVM exposes the controller
+without a usable public address, `op8-bluetooth-setup.service` assigns a stable
+locally administered address derived from the installation machine-id. BlueZ
+then reports BR/EDR and LE support and a live scan discovered nearby devices.
+Actual pairing and A2DP playback still need a user-selected peer. RFCOMM and
+BNEP have been enabled for the next matched kernel/module build. The flashlight
+has also been confirmed working by the user.
+
 ## Linux 7.2.5 validation
 
 The IN2010 has successfully temporary-booted the locally built
