@@ -36,6 +36,8 @@ assert 'Type: symlink' in debugfs('stat /sbin/init')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/multi-user.target.wants/op8-bluetooth-setup.service')
 assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-bluetooth-setup')
+assert 'Type: regular' in debugfs('stat /usr/local/bin/op8-set-wallpaper')
+assert 'Type: regular' in debugfs('stat /usr/share/applications/op8-set-wallpaper.desktop')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/AppletConfiguration.qml')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/private/ChangeWallpaperModule.qml')
 release = (P / 'artifacts/linux-7.2.5-op8/kernel.release').read_text().strip()
@@ -44,6 +46,7 @@ assert 'Type: regular' in debugfs('stat /usr/lib/firmware/qcom/sm8250/OnePlus/a6
 for path in ('/usr/bin/firefox', '/usr/bin/konsole', '/usr/bin/plasmashell'):
     assert 'Type: regular' in debugfs(f'stat {path}')
 assert any(line.startswith('bluez-utils ') for line in (out / 'packages.lock').read_text().splitlines())
+assert any(line.startswith('kdialog ') for line in (out / 'packages.lock').read_text().splitlines())
 
 header = sparse.read_bytes()[:28]
 magic, _, _, _, _, block_size, total_blocks, _, _ = struct.unpack('<I4H4I', header)

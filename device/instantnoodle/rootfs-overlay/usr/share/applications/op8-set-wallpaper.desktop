@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=选择壁纸
+Name[en]=Choose Wallpaper
+Comment=Choose and apply an image to the Plasma Mobile desktop
+Exec=/usr/local/bin/op8-set-wallpaper
+Icon=preferences-desktop-wallpaper
+Terminal=false
+Categories=Settings;DesktopSettings;

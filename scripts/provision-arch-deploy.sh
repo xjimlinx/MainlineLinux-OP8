@@ -91,7 +91,7 @@ fi
 "${op8_chroot[@]}" /usr/bin/pacman --disable-sandbox -Syu --noconfirm --needed \
 	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \
 	noto-fonts-cjk greetd networkmanager sudo openssh \
-	firefox firefox-i18n-zh-cn konsole pipewire-audio pipewire-pulse \
+	firefox firefox-i18n-zh-cn konsole kdialog pipewire-audio pipewire-pulse \
 	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils
 
 # Package removal above intentionally clears generic firmware. Restore the
@@ -105,7 +105,8 @@ cp -a "$overlay/." "$mountpoint/"
 chown -R root:root "$mountpoint/etc" "$mountpoint/usr/local" "$mountpoint/usr/share/alsa/ucm2/OnePlus"
 chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
 chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root" \
-	"$mountpoint/usr/local/sbin/op8-bluetooth-setup"
+	"$mountpoint/usr/local/sbin/op8-bluetooth-setup" \
+	"$mountpoint/usr/local/bin/op8-set-wallpaper"
 
 user_name=${OP8_USER:-xein}
 if ! "${op8_chroot[@]}" /usr/bin/id "$user_name" >/dev/null 2>&1; then

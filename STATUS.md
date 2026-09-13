@@ -14,6 +14,11 @@ wallpaper-plugin model selection. It now falls back to `org.kde.image` instead
 of attempting to apply an empty plugin name. A transferred JPEG was applied
 through the Plasma scripting API and the patched configuration page reopened
 without changing the shell PID or logging another empty-plugin failure.
+The upstream containment configuration window remains non-interactive with this
+Plasma 6.7.5/Qt 6.11.2 combination: its page is created outside the graphics
+scene. `op8-set-wallpaper` and its “选择壁纸” application entry therefore provide
+a working native file chooser and apply the selected image through the tested
+Plasma scripting API, without depending on that broken internal window.
 
 ## Audio and Bluetooth validation
 

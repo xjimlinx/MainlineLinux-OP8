@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Select and apply an image without Plasma Mobile's broken containment dialog.
+set -euo pipefail
+
+start_dir=${XDG_PICTURES_DIR:-$HOME/Pictures}
+test -d "$start_dir" || start_dir=$HOME
+
+if (($#)); then
+	image=$1
+else
+	image=$(kdialog --title "选择桌面壁纸" --getopenfilename \
+		"$start_dir" "图片 (*.jpg *.jpeg *.png *.webp *.avif *.heif *.heic)") || exit 0
+fi
+test -n "$image" || exit 0
+test -r "$image"
+
+uri=$(python -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$image")
+quoted_uri=$(python -c 'import json, sys; print(json.dumps(sys.argv[1]))' "$uri")
+
+script="var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = \"org.kde.image\"; ds[i].currentConfigGroup = [\"Wallpaper\", \"org.kde.image\", \"General\"]; ds[i].writeConfig(\"Image\", $quoted_uri); }"
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$script"
+
+kdialog --title "桌面壁纸" --passivepopup "壁纸已应用" 2 || true
