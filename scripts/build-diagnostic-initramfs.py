@@ -26,6 +26,7 @@ root = P / f'build/{mode}-initramfs/root'
 out = P / f'artifacts/{mode if mode == "diagnostic" else "arch-rootfs"}'
 root.mkdir(parents=True, exist_ok=True)
 out.mkdir(parents=True, exist_ok=True)
+shutil.rmtree(root / 'modules', ignore_errors=True)
 for name in ('bin', 'lib', 'usr', 'dev', 'proc', 'sys', 'run', 'config', 'modules'):
     (root / name).mkdir(exist_ok=True)
 # Arch's dynamic linker searches /usr/lib; keep both standard paths valid.
@@ -96,11 +97,21 @@ if insmod.is_symlink() and os.readlink(insmod) == 'busybox':
     insmod.unlink()
 if not insmod.is_symlink():
     insmod.symlink_to('kmod')
-kernel_artifacts = P / ('artifacts/in2010-kernel' if (P / 'artifacts/in2010-kernel/Image').exists()
-                        else 'artifacts/baseline')
+if (P / 'artifacts/linux-7.2.5-op8/kernel.release').exists():
+    kernel_artifacts = P / 'artifacts/linux-7.2.5-op8'
+    kernel_build = P / 'build/kernel-7.2.5-op8'
+elif (P / 'artifacts/in2010-kernel/Image').exists():
+    kernel_artifacts = P / 'artifacts/in2010-kernel'
+    kernel_build = P / 'build/in2010-kernel'
+else:
+    kernel_artifacts = P / 'artifacts/baseline'
+    kernel_build = P / 'build/kernel'
 release = (kernel_artifacts / 'kernel.release').read_text().strip()
-module_base = kernel_artifacts / 'modules/lib/modules' / release
-module_names = ('libcomposite', 'u_serial', 'usb_f_acm')
+module_root = ('modules-root' if (kernel_artifacts / 'modules-root').is_dir() else 'modules')
+module_base = kernel_artifacts / module_root / 'lib/modules' / release
+config = (kernel_artifacts / 'kernel.config').read_text()
+module_names = () if 'CONFIG_USB_LIBCOMPOSITE=y' in config else \
+    ('libcomposite', 'u_serial', 'usb_f_acm')
 for name in module_names:
     matches = list(module_base.rglob(name + '.ko.zst'))
     assert len(matches) == 1, (name, matches)
@@ -124,7 +135,8 @@ manifest_path = P / f'build/{mode}-initramfs/cpio.list'
 manifest_path.write_text('\n'.join(manifest) + '\n')
 cpio = out / f'initramfs-{mode}.cpio'
 with cpio.open('wb') as f:
-    subprocess.run([str(P / 'build/kernel/usr/gen_init_cpio'), '-t', '0', str(manifest_path)], stdout=f, check=True)
+    subprocess.run([str(kernel_build / 'usr/gen_init_cpio'), '-t', '0',
+                    str(manifest_path)], stdout=f, check=True)
 with (out / f'initramfs-{mode}.cpio.gz').open('wb') as f:
     subprocess.run(['gzip', '-n', '-c', str(cpio)], stdout=f, check=True)
 record = {'kernel_release': release, 'arch_rootfs_sha256': expected,

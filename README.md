@@ -2,22 +2,78 @@
 
 目标：原生 Linux + Arch Linux ARM 用户空间，不依赖 Android 运行。
 
-本工程已完成 Linux 7.2 非 EFI 内核、OP8 专用诊断 DTB、RAM-only initramfs、
-copy-down bootshim，以及 6 GiB Arch Linux ARM rootfs 镜像。
-**真机已进入启动验证，但主线诊断内核尚未成功接管硬件，因此不得跳过诊断门槛直接刷入。**
+本工程已完成并在 IN2010 真机临时启动 Linux 7.2.5、OP8 专用 DTB、
+Arch Linux ARM、Plasma Mobile、USB ACM/NCM 及 freedreno GPU。
+**目前只验证了 `fastboot boot`；显示休眠、充电、温控和音频回归完成前，不要永久刷写。**
 禁止把 instantnoodlep（8 Pro）或 kebab（8T）的参考 DTB 当成 instantnoodle（8）的成品。
-已有 Android/recovery 的恢复文件保留在 `/Work/Data/NX569J`，本工程不修改它们。
+本工程的构建脚本不读取或修改工程目录外的 Android/recovery 文件。
 
 ## 构建范围
 
-1. 固定 SM8250 社区 Linux 7.2.0 源码与 postmarketOS 内核配置。
-2. 在内部 NVMe 上构建 ARM64 Image、模块及上游参考 DTB，验证工具链。
+1. 固定已真机启动的 Linux 7.2.5 OP8 源码快照与 postmarketOS 基础配置。
+2. 构建 ARM64 Image.gz、IN2010 DTB 和对应模块。
 3. 获取 Arch Linux ARM aarch64 rootfs，验证归档完整性并固定本地 SHA-256。
 4. 独立核对 OP8 设备树、固件与 USB/initramfs；通过后才制作实验启动镜像。
 
-`scripts/build-kernel.sh` 默认 `-j16`，关闭 DWARF/BTF 调试信息以降低初次构建的磁盘及内存需求。
-日志在 `logs/`，内核输出在 `build/kernel/`，基线产物在 `artifacts/baseline/`。
-此基线不是可刷写 OP8 的系统。
+`scripts/build-linux-7.2.5-op8.sh` 默认 `-j16`。内核输出在
+`build/kernel-7.2.5-op8/`，打包输入在 `artifacts/linux-7.2.5-op8/`。
+
+## 从空目录复现 Linux 7.2.5 镜像
+
+Arch Linux 主机需要 Git、Clang/LLVM、make、bc、bison、flex、pahole、
+OpenSSL、libelf、Python、cpio、gzip、zstd、fakeroot、libarchive、e2fsprogs、
+android-tools（`mkbootimg`、`unpack_bootimg`、`img2simg`）和约 20 GiB 可用空间。
+
+```sh
+git clone https://github.com/xjimlinx/MainlineLinux-OP8.git
+cd MainlineLinux-OP8
+
+# 获取并校验精确的真机测试源码快照
+bash scripts/fetch-linux-7.2.5-op8.sh
+
+# 获取固定提交的 OP8 固件/ALSA 配置和固定校验和的 Arch rootfs
+bash scripts/fetch-device-assets.sh
+bash scripts/fetch-rootfs.sh
+bash scripts/fetch-qemu-test-tool.sh
+
+# 构建 7.2.5-op8-mainline、DTB 与模块
+OP8_JOBS=16 bash scripts/build-linux-7.2.5-op8.sh
+
+# 构建基础 ext4/sparse rootfs，再安装 Plasma Mobile、Firefox、Konsole 等
+bash scripts/build-arch-rootfs.sh
+pkexec bash "$(pwd)/scripts/provision-arch-deploy.sh"
+
+# 生成匹配该内核的 Arch initramfs
+python3 scripts/build-diagnostic-initramfs.py --mode arch
+
+# 生成并回读校验 header-v2 boot.img
+python3 scripts/build-linux-7.2.5-boot.py
+(cd artifacts/linux-7.2.5-op8 && sha256sum -c SHA256SUMS)
+```
+
+root 与图形用户的随机初始密码分别保存在 `artifacts/arch-rootfs/` 下权限为
+0600 的文件中。软件包取自构建时的 Arch Linux ARM 仓库，因此流程可复现，软件包集合
+并非逐字节冻结；内核源码、配置、固件/ALSA 提交和 rootfs 归档均有固定身份校验。
+
+只做 RAM 临时启动：
+
+```sh
+fastboot boot artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img
+```
+
+要复现当前整机环境，先在 recovery/fastbootd 明确确认设备是 IN2010 且允许清空
+`userdata`，然后写入 sparse rootfs；此命令会不可恢复地覆盖手机用户数据：
+
+```sh
+fastboot getvar is-userspace
+fastboot flash userdata artifacts/arch-rootfs/archlinux-in2010-rootfs.sparse.img
+fastboot reboot bootloader
+fastboot boot artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img
+```
+
+Git 仓库不存放生成的 rootfs、boot.img、固件或编译目录。内核源码快照位于独立公开
+仓库；主仓库跟踪配置片段、rootfs overlay、构建/校验脚本和所有输入提交/哈希。
+第三方固件保持原来源下载，不在本仓库重复分发。
 
 ## 当前诊断组件
 

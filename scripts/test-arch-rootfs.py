@@ -13,7 +13,9 @@ out = P / 'artifacts/arch-rootfs'
 raw = out / 'archlinux-in2010-rootfs.ext4'
 sparse = out / 'archlinux-in2010-rootfs.sparse.img'
 password_file = out / 'INITIAL-ROOT-PASSWORD.txt'
+user_password_file = out / 'INITIAL-USER-PASSWORD.txt'
 assert stat.S_IMODE(password_file.stat().st_mode) == 0o600
+assert stat.S_IMODE(user_password_file.stat().st_mode) == 0o600
 password = password_file.read_text().strip()
 assert len(password) == 24 and all(c in '0123456789abcdef' for c in password)
 assert subprocess.check_output(['blkid', '-s', 'LABEL', '-o', 'value', str(raw)], text=True).strip() == 'arch-root'
@@ -28,18 +30,23 @@ assert accounts['root'].startswith('$6$') and accounts['alarm'].startswith('!')
 parts = accounts['root'].split('$')
 verified = subprocess.check_output(['openssl', 'passwd', '-6', '-salt', parts[2], password], text=True).strip()
 assert verified == accounts['root']
+user_name, user_password = user_password_file.read_text().strip().split(':', 1)
+assert len(user_password) == 16 and accounts[user_name].startswith('$')
 assert 'Type: symlink' in debugfs('stat /sbin/init')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service')
-release = (P / 'artifacts/baseline/kernel.release').read_text().strip()
+release = (P / 'artifacts/linux-7.2.5-op8/kernel.release').read_text().strip()
 assert 'Type: directory' in debugfs(f'stat /usr/lib/modules/{release}')
+assert 'Type: regular' in debugfs('stat /usr/lib/firmware/qcom/sm8250/OnePlus/a650_zap.mbn')
+for path in ('/usr/bin/firefox', '/usr/bin/konsole', '/usr/bin/plasmashell'):
+    assert 'Type: regular' in debugfs(f'stat {path}')
 
 header = sparse.read_bytes()[:28]
 magic, _, _, _, _, block_size, total_blocks, _, _ = struct.unpack('<I4H4I', header)
 assert magic == 0xED26FF3A and block_size * total_blocks == raw.stat().st_size
-manifest = dict(line.split('=', 1) for line in (out / 'rootfs.manifest').read_text().splitlines())
+manifest = dict(line.split('=', 1) for line in (out / 'provision.manifest').read_text().splitlines())
 assert hashlib.file_digest(sparse.open('rb'), 'sha256').hexdigest() == manifest['sparse_sha256']
-boot_manifest = json.loads((P / 'artifacts/boot-images/arch/manifest.json').read_text())
-assert boot_manifest['variant'] == 'arch' and 'op8.arch=1' in ' '.join(boot_manifest['mkbootimg_parameters'])
+boot_manifest = json.loads((P / 'artifacts/linux-7.2.5-op8/boot-manifest.json').read_text())
+assert boot_manifest['kernel_release'] == release and 'op8.arch=1' in boot_manifest['cmdline']
 report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size': raw.stat().st_size,
           'root_password_matches_private_file': 'passed', 'alarm_locked': True,
           'systemd_and_ttyGS0_getty': 'present', 'matching_modules': release,
