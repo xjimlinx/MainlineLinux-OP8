@@ -1,0 +1,99 @@
+#!/bin/sh
+# RAM-only diagnostic PID 1. Never execute this on the host.
+if [ "$$" -ne 1 ]; then
+    echo 'Refusing to run diagnostic init outside PID 1.' >&2
+    exit 1
+fi
+export PATH=/bin
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t tmpfs -o mode=0755 tmpfs /run
+exec >/run/init.log 2>&1
+log() {
+    echo "OP8DIAG: $*"
+    echo "<6>OP8DIAG: $*" >/dev/kmsg
+}
+log 'stage 1: PID 1 running, virtual filesystems mounted'
+uname -a
+cat /proc/cmdline
+mkdir -p /sys/fs/pstore
+mount -t pstore pstore /sys/fs/pstore || log 'pstore mount unavailable'
+log 'stage 2: pstore attempted; no block devices will be mounted'
+
+# Require explicit opt-in at packaging/boot time; never auto-reboot on failure.
+case " $(cat /proc/cmdline) " in
+    *' op8.diag=1 '*) ;;
+    *) log 'USB diagnostics not enabled: missing op8.diag=1'; while :; do sleep 30; done ;;
+esac
+
+for module in libcomposite u_serial usb_f_acm; do
+    insmod "/modules/$module.ko" || {
+        log "module load failed: $module"
+        while :; do sleep 30; done
+    }
+done
+mkdir -p /config
+mount -t configfs configfs /config || {
+    log 'configfs mount failed'; while :; do sleep 30; done
+}
+g=/config/usb_gadget/op8diag
+mkdir -p "$g"
+# Linux serial gadget development IDs; not IDs assigned to a shipping product.
+echo 0x0525 >"$g/idVendor"
+echo 0xa4a7 >"$g/idProduct"
+echo 0x0200 >"$g/bcdUSB"
+mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409"
+echo op8-diag-prototype >"$g/strings/0x409/serialnumber"
+echo 'Local bring-up experiment' >"$g/strings/0x409/manufacturer"
+echo 'OP8 RAM-only diagnostic log' >"$g/strings/0x409/product"
+echo 'CDC ACM log output only' >"$g/configs/c.1/strings/0x409/configuration"
+echo 100 >"$g/configs/c.1/MaxPower"
+mkdir -p "$g/functions/acm.usb0"
+ln -s "$g/functions/acm.usb0" "$g/configs/c.1/acm.usb0"
+
+log 'stage 3: waiting up to 60 seconds for a USB device controller'
+udc=
+tries=0
+while [ "$tries" -lt 60 ]; do
+    for p in /sys/class/udc/*; do
+        if [ -e "$p" ]; then udc=${p##*/}; break; fi
+    done
+    [ -n "$udc" ] && break
+    tries=$((tries + 1))
+    sleep 1
+done
+if [ -z "$udc" ]; then
+    log 'no UDC found: inspect kernel log / device tree / power / PHY'
+    while :; do sleep 30; done
+fi
+if ! echo "$udc" >"$g/UDC"; then
+    log "binding UDC failed: $udc"; while :; do sleep 30; done
+fi
+log "stage 4: USB ACM bound to $udc; log-only transport, no command input"
+(
+    while [ ! -c /dev/ttyGS0 ]; do sleep 1; done
+    while :; do
+        {
+            echo '=== OP8 diagnostic snapshot (RAM-only; no shell) ==='
+            cat /run/init.log
+            cat /proc/uptime
+            # Enumerate metadata only. Never open/mount a block device here.
+            echo '=== block enumeration (no rootfs mount) ==='
+            cat /proc/partitions
+            for block in /sys/class/block/*; do
+                [ -e "$block" ] || continue
+                echo "block=${block##*/}"
+                for field in dev size ro partition; do
+                    [ ! -r "$block/$field" ] || {
+                        echo "$field:"
+                        cat "$block/$field"
+                    }
+                done
+            done
+            dmesg
+        } >/dev/ttyGS0
+        sleep 10
+    done
+) &
+while :; do sleep 30; done

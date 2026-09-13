@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/* Experimental IN2010 storage enumeration, NOT a deployable board DTS.
+ * See GITHUB-ADAPTATION.md for evidence and unverified parent wiring/reset.
+ * Keep the storage-disabled diagnostic target separately reproducible.
+ */
+#include "sm8250-oneplus-instantnoodle-diagnostic.dts"
+
+/ {
+    model = "OnePlus 8 IN2010 experimental UFS probe";
+    /* Nominal battery bus model, not a charger voltage setting. */
+    vph_pwr: regulator-vph-pwr {
+        compatible = "regulator-fixed";
+        regulator-name = "vph_pwr";
+        regulator-min-microvolt = <3700000>;
+        regulator-max-microvolt = <3700000>;
+    };
+};
+
+&apps_rsc {
+    regulators {
+        /* Parent topology inferred from community 8 Pro, not OP8 schematic.
+         * All programmable voltage ranges bounded by OP8 original rails.
+         */
+        vdd-s4-supply = <&vph_pwr>;
+        vdd-s5-supply = <&vph_pwr>;
+        vdd-s6-supply = <&vph_pwr>;
+        vdd-l2-l10-supply = <&vreg_bob>;
+        vdd-l3-l4-l5-l18-supply = <&vreg_s6a>;
+        vdd-l6-l9-supply = <&vreg_s8c>;
+        vdd-l7-l12-l14-l15-supply = <&vreg_s5a>;
+        vdd-l13-l16-l17-supply = <&vreg_bob>;
+
+        vreg_s4a: smps4 {
+            regulator-name = "vreg_s4a";
+            regulator-min-microvolt = <1800000>;
+            regulator-max-microvolt = <1920000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_s5a: smps5 {
+            regulator-name = "vreg_s5a";
+            regulator-min-microvolt = <1904000>;
+            regulator-max-microvolt = <2000000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_s6a: smps6 {
+            regulator-name = "vreg_s6a";
+            regulator-min-microvolt = <920000>;
+            regulator-max-microvolt = <1128000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_l6a: ldo6 {
+            regulator-name = "vreg_l6a";
+            regulator-min-microvolt = <1200000>;
+            regulator-max-microvolt = <1200000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_l9a: ldo9 {
+            regulator-name = "vreg_l9a";
+            regulator-min-microvolt = <1200000>;
+            regulator-max-microvolt = <1200000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_l17a: ldo17 {
+            regulator-name = "vreg_l17a";
+            /* Intersect OP8 L17 constraints with OP8 UFS consumer range.
+             * Mainline UFS does not parse downstream vcc-voltage-level.
+             */
+            regulator-min-microvolt = <2504000>;
+            regulator-max-microvolt = <2950000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+    };
+    regulators-c {
+        compatible = "qcom,pm8150l-rpmh-regulators";
+        qcom,pmic-id = "c";
+        vdd-s8-supply = <&vph_pwr>;
+        vdd-bob-supply = <&vph_pwr>;
+        vreg_s8c: smps8 {
+            regulator-name = "vreg_s8c";
+            regulator-min-microvolt = <1352000>;
+            regulator-max-microvolt = <1352000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_bob: bob {
+            regulator-name = "vreg_bob";
+            regulator-min-microvolt = <3008000>;
+            regulator-max-microvolt = <3960000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_AUTO>;
+        };
+    };
+};
+
+&ufs_mem_hc {
+    vcc-supply = <&vreg_l17a>;
+    vcc-max-microamp = <800000>;
+    vccq-supply = <&vreg_l6a>;
+    vccq-max-microamp = <800000>;
+    vccq2-supply = <&vreg_s4a>;
+    vccq2-max-microamp = <800000>;
+    status = "okay";
+};
+&ufs_mem_phy {
+    vdda-phy-supply = <&vreg_l5a_0p88>;
+    vdda-pll-supply = <&vreg_l9a>;
+    status = "okay";
+};

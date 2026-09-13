@@ -1,0 +1,11 @@
+[Unit]
+Description=Grow OP8 Arch root filesystem once
+After=local-fs.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/op8-grow-root
+
+[Install]
+WantedBy=multi-user.target

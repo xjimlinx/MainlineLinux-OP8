@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * IN2010 / project 19821 headless bring-up prototype, NOT hardware validated.
+ * SoC bindings come from sm8250-7.2.0; fixed carveouts and USB HS supplies
+ * were checked against reference/android-selected-{base,overlay} DT files.
+ * Deliberately no display, touch, UFS, radios, charging or USB host mode.
+ */
+/dts-v1/;
+#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include "sm8250.dtsi"
+#include "pm8150.dtsi"
+#include "pm8150b.dtsi"
+
+/delete-node/ &removed_mem;
+/delete-node/ &camera_mem;
+/delete-node/ &wlan_mem;
+/delete-node/ &ipa_fw_mem;
+/delete-node/ &ipa_gsi_mem;
+/delete-node/ &gpu_mem;
+/delete-node/ &npu_mem;
+/delete-node/ &video_mem;
+/delete-node/ &cvp_mem;
+/delete-node/ &cdsp_mem;
+/delete-node/ &slpi_mem;
+/delete-node/ &adsp_mem;
+/delete-node/ &spss_mem;
+/delete-node/ &cdsp_secure_heap;
+
+/ {
+    model = "OnePlus 8 IN2010 headless diagnostic prototype";
+    compatible = "oneplus,instantnoodle", "qcom,sm8250";
+    chassis-type = "handset";
+    /* Match the recorded original selected base, not an 8 Pro identifier. */
+    qcom,msm-id = <0x164 0x20001>;
+    qcom,board-id = <0 0>;
+    oplus,dtsi_no = <19821>;
+    oplus,pcb_range = <0 56>;
+
+    chosen {
+        /* No guessed framebuffer address or unverified UART console. */
+        bootargs = "rdinit=/init loglevel=7 printk.devkmsg=on";
+    };
+
+    reserved-memory {
+        /* First four SoC carveouts (hyp/xbl/cmd-db/smem) already match OP8. */
+        removed_mem: memory@80b00000 { reg = <0 0x80b00000 0 0xcd00000>; no-map; };
+        camera_mem: memory@8dc00000 { reg = <0 0x8dc00000 0 0x500000>; no-map; };
+        wlan_mem: memory@8e100000 { reg = <0 0x8e100000 0 0x100000>; no-map; };
+        ipa_fw_mem: memory@8e200000 { reg = <0 0x8e200000 0 0x10000>; no-map; };
+        ipa_gsi_mem: memory@8e210000 { reg = <0 0x8e210000 0 0xa000>; no-map; };
+        gpu_mem: memory@8e21a000 { reg = <0 0x8e21a000 0 0x2000>; no-map; };
+        npu_mem: memory@8e300000 { reg = <0 0x8e300000 0 0x500000>; no-map; };
+        video_mem: memory@8e800000 { reg = <0 0x8e800000 0 0x500000>; no-map; };
+        cvp_mem: memory@8ed00000 { reg = <0 0x8ed00000 0 0x500000>; no-map; };
+        cdsp_mem: memory@8f200000 { reg = <0 0x8f200000 0 0x1400000>; no-map; };
+        slpi_mem: memory@90600000 { reg = <0 0x90600000 0 0x1500000>; no-map; };
+        adsp_mem: memory@91b00000 { reg = <0 0x91b00000 0 0x2500000>; no-map; };
+        spss_mem: memory@94000000 { reg = <0 0x94000000 0 0x100000>; no-map; };
+        cdsp_secure_heap: memory@94100000 { reg = <0 0x94100000 0 0x4600000>; no-map; };
+        /* The original display dump lies inside splash; reserve their union. */
+        splash@9c000000 { reg = <0 0x9c000000 0 0x2300000>; no-map; };
+        dfps@9e300000 { reg = <0 0x9e300000 0 0x100000>; no-map; };
+        bootlog@9fe00000 { reg = <0 0x9fe00000 0 0x200000>; no-map; };
+        ramoops@b0000000 {
+            compatible = "ramoops";
+            reg = <0 0xb0000000 0 0x400000>;
+            record-size = <0x40000>;
+            console-size = <0x40000>;
+            ftrace-size = <0x40000>;
+            pmsg-size = <0x200000>;
+            ecc-size = <0>;
+            no-map;
+        };
+    };
+};
+
+&apps_rsc {
+    regulators {
+        compatible = "qcom,pm8150-rpmh-regulators";
+        qcom,pmic-id = "a";
+        /* OP8 downstream HS PHY uses PM8150 L5/L12/L2 at these voltages. */
+        vreg_l2a_3p1: ldo2 {
+            regulator-name = "vreg_l2a_3p1";
+            regulator-min-microvolt = <3072000>;
+            regulator-max-microvolt = <3072000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_l5a_0p88: ldo5 {
+            regulator-name = "vreg_l5a_0p88";
+            regulator-min-microvolt = <880000>;
+            regulator-max-microvolt = <880000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+        vreg_l12a_1p8: ldo12 {
+            regulator-name = "vreg_l12a_1p8";
+            regulator-min-microvolt = <1800000>;
+            regulator-max-microvolt = <1800000>;
+            regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+        };
+    };
+};
+
+&usb_1 { status = "okay"; };
+&usb_1_dwc3 {
+    dr_mode = "peripheral";
+    maximum-speed = "high-speed";
+    phys = <&usb_1_hsphy>;
+    phy-names = "usb2-phy";
+};
+&usb_1_hsphy {
+    vdda-pll-supply = <&vreg_l5a_0p88>;
+    vdda18-supply = <&vreg_l12a_1p8>;
+    vdda33-supply = <&vreg_l2a_3p1>;
+    status = "okay";
+};
+&usb_1_qmpphy { status = "disabled"; };
+&usb_2 { status = "disabled"; };
+&ufs_mem_hc { status = "disabled"; };
+&ufs_mem_phy { status = "disabled"; };
+&mdss { status = "disabled"; };
+&gpu { status = "disabled"; };
+&gmu { status = "disabled"; };
+&adsp { status = "disabled"; };
+&cdsp { status = "disabled"; };
+&slpi { status = "disabled"; };
+&venus { status = "disabled"; };
+&pm8150b_charger { status = "disabled"; };
+&pm8150b_vbus { status = "disabled"; };
+&pm8150b_typec { status = "disabled"; };

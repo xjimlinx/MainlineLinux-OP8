@@ -1,0 +1,10 @@
+[terminal]
+vt = 7
+
+[initial_session]
+command = "/usr/bin/env LANG=zh_CN.UTF-8 /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasmamobile"
+user = "xein"
+
+[default_session]
+command = "agreety --cmd '/usr/bin/env LANG=zh_CN.UTF-8 /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasmamobile'"
+user = "greeter"

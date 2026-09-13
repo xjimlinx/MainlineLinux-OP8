@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Offline ext4/sparse/credential/boot linkage checks; no mount or phone I/O."""
+from pathlib import Path
+import hashlib
+import json
+import os
+import stat
+import struct
+import subprocess
+
+P = Path(__file__).resolve().parents[1]
+out = P / 'artifacts/arch-rootfs'
+raw = out / 'archlinux-in2010-rootfs.ext4'
+sparse = out / 'archlinux-in2010-rootfs.sparse.img'
+password_file = out / 'INITIAL-ROOT-PASSWORD.txt'
+assert stat.S_IMODE(password_file.stat().st_mode) == 0o600
+password = password_file.read_text().strip()
+assert len(password) == 24 and all(c in '0123456789abcdef' for c in password)
+assert subprocess.check_output(['blkid', '-s', 'LABEL', '-o', 'value', str(raw)], text=True).strip() == 'arch-root'
+subprocess.run(['e2fsck', '-fn', str(raw)], check=True, stdout=subprocess.DEVNULL)
+
+def debugfs(command):
+    return subprocess.check_output(['debugfs', '-R', command, str(raw)], text=True, stderr=subprocess.DEVNULL)
+
+shadow = debugfs('cat /etc/shadow')
+accounts = {line.split(':', 1)[0]: line.split(':')[1] for line in shadow.splitlines()}
+assert accounts['root'].startswith('$6$') and accounts['alarm'].startswith('!')
+parts = accounts['root'].split('$')
+verified = subprocess.check_output(['openssl', 'passwd', '-6', '-salt', parts[2], password], text=True).strip()
+assert verified == accounts['root']
+assert 'Type: symlink' in debugfs('stat /sbin/init')
+assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service')
+release = (P / 'artifacts/baseline/kernel.release').read_text().strip()
+assert 'Type: directory' in debugfs(f'stat /usr/lib/modules/{release}')
+
+header = sparse.read_bytes()[:28]
+magic, _, _, _, _, block_size, total_blocks, _, _ = struct.unpack('<I4H4I', header)
+assert magic == 0xED26FF3A and block_size * total_blocks == raw.stat().st_size
+manifest = dict(line.split('=', 1) for line in (out / 'rootfs.manifest').read_text().splitlines())
+assert hashlib.file_digest(sparse.open('rb'), 'sha256').hexdigest() == manifest['sparse_sha256']
+boot_manifest = json.loads((P / 'artifacts/boot-images/arch/manifest.json').read_text())
+assert boot_manifest['variant'] == 'arch' and 'op8.arch=1' in ' '.join(boot_manifest['mkbootimg_parameters'])
+report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size': raw.stat().st_size,
+          'root_password_matches_private_file': 'passed', 'alarm_locked': True,
+          'systemd_and_ttyGS0_getty': 'present', 'matching_modules': release,
+          'arch_boot_image_linkage': 'passed', 'phone_flash': 'NOT PERFORMED'}
+(out / 'test-results.json').write_text(json.dumps(report, indent=2) + '\n')
+print(json.dumps(report, indent=2))

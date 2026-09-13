@@ -1,0 +1,1 @@
+LABEL=arch-root / ext4 defaults,noatime 0 1

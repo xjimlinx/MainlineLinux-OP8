@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+marker=/var/lib/op8-root-grown
+[ ! -e "$marker" ] || exit 0
+device=$(findmnt -n -o SOURCE /)
+case "$device" in /dev/*) ;; *) echo "Unexpected root source: $device" >&2; exit 1;; esac
+resize2fs "$device"
+touch "$marker"

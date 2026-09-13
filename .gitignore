@@ -1,0 +1,21 @@
+# Downloaded upstream repositories and archives
+/sources/
+/downloads/
+/toolchains/
+
+# Generated build trees, logs, and flashable artifacts
+/build/
+/logs/
+/artifacts/
+
+# Python and editor-generated files
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+*~
+
+# Local credentials and private keys
+*PASSWORD*
+*.key
+*.pem
