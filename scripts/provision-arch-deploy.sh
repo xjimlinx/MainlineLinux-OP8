@@ -70,6 +70,14 @@ rm -f "$mountpoint/etc/resolv.conf"
 cp -L /etc/resolv.conf "$mountpoint/etc/resolv.conf"
 chroot "$mountpoint" /usr/bin/qemu-aarch64-static /bin/bash /usr/bin/pacman-key --init
 chroot "$mountpoint" /usr/bin/qemu-aarch64-static /bin/bash /usr/bin/pacman-key --populate archlinux archlinuxarm
+# pacman 7 enables a Landlock filesystem sandbox for downloads by default.
+# The boot-tested 6.16.7 OP8 kernel has seccomp but was built without Landlock;
+# disable only the unavailable filesystem half and keep syscall sandboxing and
+# package signature verification intact until a Landlock-enabled kernel passes
+# temporary-boot validation.
+if ! grep -qx 'DisableSandboxFilesystem' "$mountpoint/etc/pacman.conf"; then
+	sed -i '/^\[options\]$/a DisableSandboxFilesystem' "$mountpoint/etc/pacman.conf"
+fi
 chroot "$mountpoint" /usr/bin/qemu-aarch64-static /usr/bin/pacman --disable-sandbox \
 	-Syu --noconfirm --needed \
 	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \

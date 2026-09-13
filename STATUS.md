@@ -1,4 +1,30 @@
-# Mainline boot bring-up in progress — 2026-09-13
+# Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-13
+
+## Linux 7.2.5 validation
+
+The IN2010 has successfully temporary-booted the locally built
+`7.2.5-op8-mainline` kernel into the installed Arch Linux ARM root filesystem.
+UFS/ext4 root, USB ACM+NCM, SSH, DRM, the Samsung AMB655UV01 panel, freedreno
+firmware, KWin Wayland and Plasma Mobile all reached userspace. No phone boot
+partition was written; rebooting still falls back to the previously installed
+kernel.
+
+The test image is `artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img`
+(SHA-256 `e1a6c42d675fcfad365675e98a9189d893c069642489bce0ae3bdd5518317fa5`).
+Matching 7.2.5 modules are installed under
+`/usr/lib/modules/7.2.5-op8-mainline` on the Arch root filesystem.
+
+The panel inversion regression was traced to regulator late cleanup disabling
+`panel_avdd_5p5` while the panel was active, followed by an unbalanced disable.
+The driver now owns a lifetime regulator reference, restores the vendor F5=87
+normal-color latch, uses the vendor 8/4/6 vertical porch, and uses the complete
+IN2010 initialization table. The fix is committed in the kernel worktree as
+`d51f4884ca39d7e7846329f8f77e13fe09c5cee9` and is present in the 7.2.5 image.
+
+Remaining display work: the first modeset still records a recovered DSI PLL
+lock retry and one `dsi_err_worker: status=5`. The desktop remains running, but
+screen off/on and longer suspend stress must pass before replacing the installed
+boot image.
 
 ## Running Arch deployment
 
@@ -14,12 +40,10 @@ new kernel error. Microphone capture is not stable: the QDSP6 driver reports
 `Buffer already allocated` and `q6asm_open_write failed`, after which PipeWire
 must restart. Do not treat microphone input as working yet.
 
-The existing 7.2.0 build artifacts are not a drop-in upgrade. The upstream
-SM8250 tree has DTBs for instantnoodlep (OnePlus 8 Pro) and kebab (OnePlus 8T),
-but no complete instantnoodle (OnePlus 8) DTB. The 7.2 IN2010 DTS in this project
-remains a headless diagnostic prototype and must not replace the boot-tested
-6.16.7 kernel until display, storage, USB, regulators, audio and rollback have
-all been validated through temporary boot.
+The 7.2.0 SM8250 community tree has now been updated with the official stable
+7.2.5 patch and the IN2010 DTS/panel port. It has passed its first temporary
+boot, but must not replace the boot-tested fallback until display power-state,
+audio, charging/thermal and rollback tests are complete.
 
 ## Latest work
 
