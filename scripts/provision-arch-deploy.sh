@@ -14,7 +14,8 @@ sparse="$op8_project/artifacts/arch-rootfs/archlinux-in2010-rootfs.sparse.img"
 overlay="$op8_project/device/instantnoodle/rootfs-overlay"
 assets="$op8_project/sources/github-references/linux-oneplus-instantnoodle"
 firmware="$assets/firmware-oneplus-instantnoodle/usr/lib/firmware"
-qemu="$op8_project/toolchains/qemu-test/usr/bin/qemu-aarch64-static"
+qemu=/usr/bin/qemu-aarch64-static
+[[ -x $qemu ]] || qemu="$op8_project/toolchains/qemu-test/usr/bin/qemu-aarch64-static"
 mountpoint="$op8_project/build/arch-rootfs-mnt"
 release_file="$op8_project/artifacts/linux-7.2.5-op8/kernel.release"
 

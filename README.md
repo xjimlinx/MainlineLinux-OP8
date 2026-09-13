@@ -22,7 +22,22 @@ Arch Linux ARM、Plasma Mobile、USB ACM/NCM 及 freedreno GPU。
 
 Arch Linux 主机需要 Git、Clang/LLVM、make、bc、bison、flex、pahole、
 OpenSSL、libelf、Python、cpio、gzip、zstd、fakeroot、libarchive、e2fsprogs、
-android-tools（`mkbootimg`、`unpack_bootimg`、`img2simg`）和约 20 GiB 可用空间。
+qemu-user-static、android-tools（`mkbootimg`、`unpack_bootimg`、`img2simg`）和
+约 20 GiB 可用空间。Arch Linux 可安装：
+
+```sh
+sudo pacman -S --needed base-devel bc clang llvm lld libelf pahole python git curl \
+  gnupg libarchive cpio zstd fakeroot dtc e2fsprogs android-tools qemu-user-static
+```
+
+一条命令执行完整构建、图形 rootfs 配置和离线校验：
+
+```sh
+OP8_JOBS=16 bash scripts/reproduce.sh
+```
+
+脚本只生成本地文件，不连接或写入手机；配置 rootfs 时会通过 polkit 请求一次主机权限。
+需要逐步排错时使用下面的等价命令。
 
 ```sh
 git clone https://github.com/xjimlinx/MainlineLinux-OP8.git
@@ -34,7 +49,6 @@ bash scripts/fetch-linux-7.2.5-op8.sh
 # 获取固定提交的 OP8 固件/ALSA 配置和固定校验和的 Arch rootfs
 bash scripts/fetch-device-assets.sh
 bash scripts/fetch-rootfs.sh
-bash scripts/fetch-qemu-test-tool.sh
 
 # 构建 7.2.5-op8-mainline、DTB 与模块
 OP8_JOBS=16 bash scripts/build-linux-7.2.5-op8.sh
