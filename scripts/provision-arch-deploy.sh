@@ -69,11 +69,13 @@ mount --make-rslave "$mountpoint/run"
 rm -f "$mountpoint/etc/resolv.conf"
 cp -L /etc/resolv.conf "$mountpoint/etc/resolv.conf"
 chroot "$mountpoint" /usr/bin/qemu-aarch64-static /bin/bash /usr/bin/pacman-key --init
-chroot "$mountpoint" /usr/bin/qemu-aarch64-static /bin/bash /usr/bin/pacman-key --populate archlinuxarm
+chroot "$mountpoint" /usr/bin/qemu-aarch64-static /bin/bash /usr/bin/pacman-key --populate archlinux archlinuxarm
 chroot "$mountpoint" /usr/bin/qemu-aarch64-static /usr/bin/pacman --disable-sandbox \
 	-Syu --noconfirm --needed \
 	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \
-	noto-fonts-cjk greetd networkmanager sudo
+	noto-fonts-cjk greetd networkmanager sudo \
+	firefox firefox-i18n-zh-cn konsole pipewire-audio pipewire-pulse wireplumber plasma-pa \
+	alsa-utils rtkit
 
 # Install the exact module tree matching the already boot-tested phone kernel.
 module_tmp=$(mktemp -d "$project/build/arch-kernel-apk.XXXXXX")

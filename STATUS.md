@@ -1,5 +1,26 @@
 # Mainline boot bring-up in progress — 2026-09-13
 
+## Running Arch deployment
+
+The IN2010 now boots Arch Linux ARM with the device-specific 6.16.7 kernel and
+Plasma Mobile. Display, freedreno GPU acceleration, touch, Wi-Fi, USB networking,
+SSH, battery reporting and basic speaker playback are operational. Firefox,
+Simplified Chinese localization, Konsole, PipeWire, WirePlumber, plasma-pa and
+RealtimeKit are installed by the reproducible deployment recipe.
+
+OnePlus 8 UCM routing is included in the rootfs overlay. PipeWire exposes a real
+speaker sink and microphone source; a short speaker sample completes without a
+new kernel error. Microphone capture is not stable: the QDSP6 driver reports
+`Buffer already allocated` and `q6asm_open_write failed`, after which PipeWire
+must restart. Do not treat microphone input as working yet.
+
+The existing 7.2.0 build artifacts are not a drop-in upgrade. The upstream
+SM8250 tree has DTBs for instantnoodlep (OnePlus 8 Pro) and kebab (OnePlus 8T),
+but no complete instantnoodle (OnePlus 8) DTB. The 7.2 IN2010 DTS in this project
+remains a headless diagnostic prototype and must not replace the boot-tested
+6.16.7 kernel until display, storage, USB, regulators, audio and rollback have
+all been validated through temporary boot.
+
 ## Latest work
 
 GitHub-based adaptation added a separate `storage-probe` DTS, preserving the diagnostic target.
