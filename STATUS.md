@@ -1,5 +1,15 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-13
 
+## Plasma Mobile configuration crash workaround
+
+On Plasma Mobile 6.7.5 with Qt 6.11.2, opening the Folio desktop configuration
+reproducibly crashed `plasmashell` in `QQmlBind::componentComplete`, briefly
+leaving a black screen while systemd restarted the shell. KWin stayed alive and
+the kernel logged no GPU fault. The rootfs overlay now defers the configuration
+window flags and visibility assignments until the attached window is valid.
+Both the widget explorer and the containment configuration entry were exercised
+over D-Bus afterward without a new coredump or a `plasmashell` PID change.
+
 ## Audio and Bluetooth validation
 
 The 7.2.5 port now includes the missing TFA9872/TFA9874 ASoC driver. Both
