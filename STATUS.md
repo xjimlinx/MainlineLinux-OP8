@@ -13,6 +13,9 @@ The test image is `artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img`
 (SHA-256 `e1a6c42d675fcfad365675e98a9189d893c069642489bce0ae3bdd5518317fa5`).
 Matching 7.2.5 modules are installed under
 `/usr/lib/modules/7.2.5-op8-mainline` on the Arch root filesystem.
+The corresponding source snapshot is published as branch `7.2.5-op8` at
+`https://github.com/xjimlinx/mainline-instantnoodle` (commit
+`eb5ded2cafbca9e93ad6f6f388d11693cee09d58`).
 
 The panel inversion regression was traced to regulator late cleanup disabling
 `panel_avdd_5p5` while the panel was active, followed by an unbalanced disable.
