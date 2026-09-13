@@ -37,6 +37,7 @@ assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/s
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/multi-user.target.wants/op8-bluetooth-setup.service')
 assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-bluetooth-setup')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/AppletConfiguration.qml')
+assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/private/ChangeWallpaperModule.qml')
 release = (P / 'artifacts/linux-7.2.5-op8/kernel.release').read_text().strip()
 assert 'Type: directory' in debugfs(f'stat /usr/lib/modules/{release}')
 assert 'Type: regular' in debugfs('stat /usr/lib/firmware/qcom/sm8250/OnePlus/a650_zap.mbn')
@@ -56,6 +57,7 @@ report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size':
           'systemd_and_ttyGS0_getty': 'present', 'matching_modules': release,
           'op8_bluetooth_boot_setup': 'present',
           'plasma_mobile_config_crash_workaround': 'present',
+          'plasma_mobile_wallpaper_plugin_fallback': 'present',
           'arch_boot_image_linkage': 'passed', 'phone_flash': 'NOT PERFORMED'}
 (out / 'test-results.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report, indent=2))

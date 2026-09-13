@@ -9,6 +9,11 @@ the kernel logged no GPU fault. The rootfs overlay now defers the configuration
 window flags and visibility assignments until the attached window is valid.
 Both the widget explorer and the containment configuration entry were exercised
 over D-Bus afterward without a new coredump or a `plasmashell` PID change.
+The wallpaper page also received a guard for Plasma's temporarily empty
+wallpaper-plugin model selection. It now falls back to `org.kde.image` instead
+of attempting to apply an empty plugin name. A transferred JPEG was applied
+through the Plasma scripting API and the patched configuration page reopened
+without changing the shell PID or logging another empty-plugin failure.
 
 ## Audio and Bluetooth validation
 
