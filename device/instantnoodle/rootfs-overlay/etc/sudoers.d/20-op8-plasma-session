@@ -1,0 +1,3 @@
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/op8-switch-plasma-session mobile
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/op8-switch-plasma-session desktop
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/op8-switch-plasma-session toggle

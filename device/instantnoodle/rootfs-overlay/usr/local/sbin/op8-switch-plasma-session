@@ -1,0 +1,65 @@
+#!/bin/sh
+# Persist the requested shell and ask greetd to replace the graphical session.
+set -eu
+
+test "$(id -u)" -eq 0 || {
+	echo 'this command must run as root' >&2
+	exit 1
+}
+
+state_dir=/var/lib/op8-plasma-session
+mode_file=$state_dir/mode
+current=mobile
+if test -r "$mode_file"; then
+	IFS= read -r current <"$mode_file" || current=mobile
+fi
+
+requested=${1:-}
+case "$requested" in
+	toggle)
+		if test "$current" = desktop; then requested=mobile; else requested=desktop; fi
+		;;
+	mobile|desktop) ;;
+	*)
+		echo 'usage: op8-switch-plasma-session {mobile|desktop|toggle}' >&2
+		exit 2
+		;;
+esac
+
+case "$requested" in
+	desktop) executable=/usr/bin/startplasma-wayland ;;
+	mobile) executable=/usr/bin/startplasmamobile ;;
+esac
+test -x "$executable" || {
+	echo "cannot switch: missing $executable" >&2
+	exit 3
+}
+
+install -d -m 0755 "$state_dir"
+temporary=$state_dir/.mode.$$
+trap 'rm -f "$temporary"' EXIT HUP INT TERM
+printf '%s\n' "$requested" >"$temporary"
+chmod 0644 "$temporary"
+mv -f "$temporary" "$mode_file"
+trap - EXIT HUP INT TERM
+
+# The user manager remains alive while SSH is connected, so Plasma's user
+# services can outlive the greetd PAM session. Stop them explicitly; otherwise
+# the new Mobile/Desktop launcher would reuse the old shell and compositor.
+session_user=${SUDO_USER:-xein}
+session_uid=$(id -u "$session_user")
+runtime_dir=/run/user/$session_uid
+if test -S "$runtime_dir/bus"; then
+	runuser -u "$session_user" -- env \
+		XDG_RUNTIME_DIR="$runtime_dir" \
+		DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
+		systemctl --user stop plasma-workspace.target \
+		plasma-plasmashell.service plasma-kwin_wayland.service || true
+fi
+
+# --no-block lets this request survive the teardown of the calling session.
+# greetd records that its one-shot initial session already ran in this volatile
+# file. Remove it so a daemon restart performs the configured xein autologin
+# instead of stopping at the agreety text login.
+rm -f /run/greetd.run
+systemctl --no-block restart greetd.service

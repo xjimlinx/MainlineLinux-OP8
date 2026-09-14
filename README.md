@@ -54,7 +54,7 @@ bash scripts/fetch-rootfs.sh
 # 构建 7.2.5-op8-mainline、DTB 与模块
 OP8_JOBS=16 bash scripts/build-linux-7.2.5-op8.sh
 
-# 构建基础 ext4/sparse rootfs，再安装 Plasma Mobile、Firefox、Konsole 等
+# 构建基础 ext4/sparse rootfs，再安装 Plasma、Firefox、Konsole、Codex CLI 等
 bash scripts/build-arch-rootfs.sh
 pkexec bash "$(pwd)/scripts/provision-arch-deploy.sh"
 
@@ -102,6 +102,16 @@ Linux 7.2.5 已验证显示、触摸、freedreno、UFS、USB ACM/NCM、Wi-Fi、
 本机只读 `bluetooth_a` 分区提取与硬件匹配的 `htbtfw20.tlv`/`htnv20.bin`，
 并为缺少出厂公共地址的控制器生成随本次安装保持稳定的本地地址；专有固件不会
 复制进 Git 仓库。蓝牙配对、A2DP 实际播放以及麦克风长期录音仍需继续回归。
+
+Plasma Mobile 与 Plasma Desktop 是两个独立的 Wayland 会话，不能在保留窗口的情况下
+原地变成类似 DeX 的 PC 模式。系统同时安装两者，并提供“切换手机/桌面模式”应用：它会
+保存目标模式并让 greetd 立即重新建立图形会话，不重启手机；切换会关闭当前所有窗口，
+需要先保存工作。命令行也可使用
+`sudo /usr/local/sbin/op8-switch-plasma-session mobile|desktop`。
+
+rootfs 同时安装固定版本的 Linux ARM64 Codex CLI、Node.js、Git 与 ripgrep。首次使用时
+在 Konsole 中运行 `codex login`（或设置自己的 `OPENAI_API_KEY`）；登录状态属于手机用户，
+不会被构建脚本写入镜像或 Git。可在构建时用 `OP8_CODEX_VERSION=x.y.z` 显式选择其他版本。
 
 USB-C DisplayPort Alt Mode 的供电、Type-C 能力声明和内核协议驱动已加入；USB-C
 转 HDMI 扩展坞由扩展坞将 DP 转换为 HDMI，仍需用新 boot.img 在真机完成 HPD、链路训练、

@@ -1,0 +1,37 @@
+#!/bin/sh
+# Start the selected Plasma shell. Plasma Mobile and Plasma Desktop are
+# separate Wayland sessions, so greetd invokes this dispatcher after login.
+set -eu
+
+mode_file=/var/lib/op8-plasma-session/mode
+mode=mobile
+if test -r "$mode_file"; then
+	IFS= read -r mode <"$mode_file" || mode=mobile
+fi
+
+case "$mode" in
+	desktop)
+	# startplasmamobile imports these values into the persistent systemd user
+	# manager. Clear them before Desktop starts or it can load MobileShell again.
+	unset PLASMA_DEFAULT_SHELL PLASMA_PLATFORM QT_QUICK_CONTROLS_MOBILE \
+		PLASMA_INTEGRATION_USE_PORTAL
+	systemctl --user unset-environment PLASMA_DEFAULT_SHELL PLASMA_PLATFORM \
+		QT_QUICK_CONTROLS_MOBILE PLASMA_INTEGRATION_USE_PORTAL \
+		XDG_CONFIG_DIRS 2>/dev/null || true
+	session=/usr/bin/startplasma-wayland
+	;;
+	mobile) session=/usr/bin/startplasmamobile ;;
+	*)
+		echo "invalid Plasma session mode '$mode'; falling back to mobile" >&2
+		session=/usr/bin/startplasmamobile
+		;;
+esac
+
+if ! test -x "$session"; then
+	echo "selected Plasma session is unavailable: $session" >&2
+	session=/usr/bin/startplasmamobile
+fi
+test -x "$session"
+
+exec /usr/bin/env LANG=zh_CN.UTF-8 \
+	/usr/lib/plasma-dbus-run-session-if-needed "$session"

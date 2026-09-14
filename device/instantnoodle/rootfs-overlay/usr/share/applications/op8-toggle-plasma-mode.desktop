@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=切换手机/桌面模式
+Name[en]=Switch Mobile/Desktop Mode
+Comment=Restart the graphical session using Plasma Mobile or Plasma Desktop
+Comment[zh_CN]=退出当前图形会话并切换 Plasma Mobile 或 Plasma Wayland 桌面
+Exec=/usr/local/bin/op8-toggle-plasma-mode
+Icon=preferences-desktop-display
+Terminal=false
+Categories=Settings;

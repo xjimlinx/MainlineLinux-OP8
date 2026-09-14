@@ -26,6 +26,11 @@ for path in "$image" "$overlay" "$firmware" "$qbootctl_source/meson.build" "$qem
 done
 release=$(<"$release_file")
 [[ $release = 7.2.5-op8-mainline ]]
+codex_cli_version=${OP8_CODEX_VERSION:-0.154.0}
+[[ $codex_cli_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+	echo "invalid OP8_CODEX_VERSION: $codex_cli_version" >&2
+	exit 1
+}
 modules_source="$op8_project/artifacts/linux-7.2.5-op8/modules-root/lib/modules/$release"
 [[ -d $modules_source/kernel ]] || { echo "missing matching modules: $modules_source" >&2; exit 1; }
 mkdir -p "$mountpoint"
@@ -103,10 +108,17 @@ if ((${#legacy_build_packages[@]})); then
 	"${op8_chroot[@]}" /usr/bin/pacman -Rns --noconfirm "${legacy_build_packages[@]}"
 fi
 "${op8_chroot[@]}" /usr/bin/pacman --disable-sandbox -Syu --noconfirm --needed \
-	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \
+	mesa mesa-utils plasma-mobile plasma-desktop plasma-settings kscreen bluedevil \
 	noto-fonts-cjk greetd networkmanager sudo openssh \
 	firefox firefox-i18n-zh-cn konsole kdialog pipewire-audio pipewire-pulse \
-	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils
+	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils \
+	nodejs npm git ripgrep
+
+# Codex publishes a native Linux ARM64 payload through this architecture-aware
+# npm package. Pin the version so rebuilding does not silently change the CLI.
+"${op8_chroot[@]}" /usr/bin/node /usr/bin/npm install --global --omit=dev \
+	"@openai/codex@$codex_cli_version"
+[[ -x "$mountpoint/usr/bin/codex" ]]
 
 # Build the pinned utility with the host Clang and the ARM64 rootfs as sysroot.
 # This avoids enabling binfmt_misc and avoids shipping a compiler on the phone.
@@ -137,10 +149,14 @@ cp -a "$firmware/qcom/sm8250/OnePlus8/." \
 cp -a "$overlay/." "$mountpoint/"
 chown -R root:root "$mountpoint/etc" "$mountpoint/usr/local" "$mountpoint/usr/share/alsa/ucm2/OnePlus"
 chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
+chmod 0440 "$mountpoint/etc/sudoers.d/20-op8-plasma-session"
 chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root" \
 	"$mountpoint/usr/local/sbin/op8-bluetooth-setup" \
 	"$mountpoint/usr/local/sbin/op8-mark-slot-successful" \
 	"$mountpoint/usr/local/sbin/op8-typec-monitor" \
+	"$mountpoint/usr/local/sbin/op8-switch-plasma-session" \
+	"$mountpoint/usr/local/bin/op8-plasma-session" \
+	"$mountpoint/usr/local/bin/op8-toggle-plasma-mode" \
 	"$mountpoint/usr/local/bin/op8-set-wallpaper"
 
 user_name=${OP8_USER:-xein}
@@ -189,6 +205,7 @@ packages_sha=$(sha256sum "$packages_file" | awk '{print $1}')
 	printf 'kernel_release=%s\n' "$release"
 	printf 'device_assets_commit=%s\n' "$OP8_DEVICE_ASSETS_COMMIT"
 	printf 'qbootctl_commit=%s\n' "$OP8_QBOOTCTL_COMMIT"
+	printf 'codex_cli_version=%s\n' "$codex_cli_version"
 	printf 'raw_sha256=%s\n' "$raw_sha"
 	printf 'sparse_sha256=%s\n' "$sparse_sha"
 	printf 'packages_lock_sha256=%s\n' "$packages_sha"

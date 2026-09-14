@@ -1,0 +1,30 @@
+#!/bin/sh
+# User-facing launcher for switching between phone and desktop shells.
+set -eu
+
+mode=mobile
+if test -r /var/lib/op8-plasma-session/mode; then
+	IFS= read -r mode </var/lib/op8-plasma-session/mode || mode=mobile
+fi
+if test "$mode" = desktop; then
+	target=mobile
+	target_name='Plasma Mobile 手机模式'
+else
+	target=desktop
+	target_name='Plasma Wayland 桌面模式'
+fi
+
+if command -v kdialog >/dev/null 2>&1; then
+	kdialog --title '切换 Plasma 模式' --warningyesno \
+		"将退出当前图形会话并切换到 ${target_name}。未保存的窗口内容会丢失，是否继续？" || exit 0
+fi
+
+if ! sudo -n /usr/local/sbin/op8-switch-plasma-session "$target"; then
+	message="无法切换到 ${target_name}。请检查 plasma-desktop 是否安装以及 greetd 日志。"
+	if command -v kdialog >/dev/null 2>&1; then
+		kdialog --title '切换失败' --error "$message"
+	else
+		echo "$message" >&2
+	fi
+	exit 1
+fi
