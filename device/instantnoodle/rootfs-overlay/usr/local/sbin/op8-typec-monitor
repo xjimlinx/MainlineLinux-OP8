@@ -1,0 +1,29 @@
+#!/bin/sh
+# Record Type-C role and DisplayPort state transitions for offline dock tests.
+set -eu
+
+read_one() {
+	for path in $1; do
+		[ -r "$path" ] || continue
+		cat "$path"
+		return
+	done
+	echo none
+}
+
+previous=
+while :; do
+	role=$(read_one '/sys/class/usb_role/*/role')
+	data_role=$(read_one '/sys/class/typec/port0/data_role')
+	power_role=$(read_one '/sys/class/typec/port0/power_role')
+	partner=absent
+	[ ! -e /sys/class/typec/port0-partner ] || partner=present
+	partner_alt=$(read_one '/sys/class/typec/port0-partner/port0-partner.*/active')
+	dp=$(read_one '/sys/class/drm/card*-DP-*/status')
+	state="role=$role data_role=$data_role power_role=$power_role partner=$partner partner_dp_alt=$partner_alt dp=$dp"
+	if [ "$state" != "$previous" ]; then
+		echo "OP8_TYPEC $state"
+		previous=$state
+	fi
+	sleep 1
+done

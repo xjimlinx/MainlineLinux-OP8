@@ -135,6 +135,7 @@ chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
 chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root" \
 	"$mountpoint/usr/local/sbin/op8-bluetooth-setup" \
 	"$mountpoint/usr/local/sbin/op8-mark-slot-successful" \
+	"$mountpoint/usr/local/sbin/op8-typec-monitor" \
 	"$mountpoint/usr/local/bin/op8-set-wallpaper"
 
 user_name=${OP8_USER:-xein}
@@ -163,6 +164,7 @@ sed -i 's/^#zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' "$mountpoint/etc/locale.gen"
 	NetworkManager systemd-resolved sshd greetd bluetooth ModemManager upower
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.service
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-mark-slot-successful.timer
+"${op8_chroot[@]}" /usr/bin/systemctl enable op8-typec-monitor.service
 "${op8_chroot[@]}" /usr/bin/systemctl set-default graphical.target
 ln -sfn ../run/systemd/resolve/stub-resolv.conf "$mountpoint/etc/resolv.conf"
 rm -f "$mountpoint/usr/bin/qemu-aarch64-static"

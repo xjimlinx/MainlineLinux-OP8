@@ -38,6 +38,7 @@ assert 'Type: symlink' in debugfs('stat /etc/systemd/system/multi-user.target.wa
 assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-bluetooth-setup')
 assert 'Type: regular' in debugfs('stat /usr/local/bin/qbootctl')
 assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-mark-slot-successful')
+assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-typec-monitor')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/timers.target.wants/op8-mark-slot-successful.timer')
 assert 'Type: regular' in debugfs('stat /usr/local/bin/op8-set-wallpaper')
 assert 'Type: regular' in debugfs('stat /usr/share/applications/op8-set-wallpaper.desktop')

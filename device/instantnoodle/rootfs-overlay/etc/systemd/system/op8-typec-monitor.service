@@ -1,0 +1,12 @@
+[Unit]
+Description=Record OnePlus 8 Type-C and DisplayPort transitions
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/op8-typec-monitor
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

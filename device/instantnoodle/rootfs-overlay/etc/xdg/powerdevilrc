@@ -1,0 +1,10 @@
+# Suspend/resume is not yet reliable on instantnoodle. Keep display blanking
+# and screen locking available, but do not suspend the whole phone on idle.
+[AC][SuspendAndShutdown]
+AutoSuspendAction=0
+
+[Battery][SuspendAndShutdown]
+AutoSuspendAction=0
+
+[LowBattery][SuspendAndShutdown]
+AutoSuspendAction=0
