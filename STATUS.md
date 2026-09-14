@@ -1,5 +1,14 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-14
 
+应用部署记录（QQ / Steam / WPS）见 [`docs/APP-DEPLOYMENT.md`](docs/APP-DEPLOYMENT.md)。QQ ARM64 已部署；Steam/WPS 的架构限制与后续方案已记录。
+
+## 基带 PCIe 已屏蔽
+
+为避免未使用的 SDX55 基带在冷启动时参与 PCIe PHY 链路训练，设备树提交
+`be00898d3` 将 `pcie2`/`pcie2_phy`（`1c10000.pcie`）设为 disabled。Wi‑Fi
+`pcie0`（`1c00000.pcie`）、USB‑C、显示、UFS 不受影响。新镜像已写入 A 槽并验证
+正常启动：仅出现 Wi‑Fi PCIe endpoint，未出现 SDX55/MHI 节点，图形目标约 12 秒达到。
+
 ## Latest boot investigation
 
 静态分析确认面板 AVDD 固定稳压器缺少 `enable-active-high`，导致

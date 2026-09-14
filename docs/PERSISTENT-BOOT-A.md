@@ -12,6 +12,12 @@ PM8009 重复 PON）、`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`（早期面板
 屏幕由用户确认颜色正常。镜像 SHA-256 为
 `60ff7408d8c5ab70c7bd56aebe9549794781efe180f1b5678704d2d49a6a4a5e`。
 
+2026-09-14 后续为避免未使用的 SDX55 基带 PCIe 冷启动参与链路训练，设备树提交
+`be00898d3` 将 `pcie2`/`pcie2_phy`（`1c10000.pcie`）设为 disabled；Wi‑Fi
+`pcie0`（`1c00000.pcie`）保持启用。新的测试/持久化 boot 镜像 SHA-256 为
+`7cfd281ab191d6b3504c9c0b98401225cf4ab812702bc12abed8b96d0370f9b9`，已写入
+`boot_a` 并验证从 A 槽正常启动；启动时只枚举 Wi‑Fi PCIe endpoint，图形目标约 12 秒达到。
+
 ## 结果
 
 OnePlus 8 IN2010 已经从 A 槽的 `boot_a` 正常启动 Linux
