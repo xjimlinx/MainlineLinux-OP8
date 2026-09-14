@@ -25,14 +25,15 @@ active=$($qbootctl -a | sed -n 's/^Active slot: \(_[ab]\)$/\1/p')
 	echo "current/active slot mismatch: current=$current active=$active" >&2
 	exit 1
 }
-if $qbootctl -n "$current" | grep -qx "SLOT $current: is marked successful"; then
+slot=${current#_}
+if $qbootctl -n "$slot" | grep -qx "SLOT $current: is marked successful"; then
 	echo "slot $current was already marked successful"
 	exit 0
 fi
-$qbootctl -b "$current" | grep -qx "SLOT $current: is marked bootable" || {
+$qbootctl -b "$slot" | grep -qx "SLOT $current: is marked bootable" || {
 	echo "current slot $current is not bootable; refusing slot write" >&2
 	exit 1
 }
-$qbootctl -m "$current"
-$qbootctl -n "$current" | grep -qx "SLOT $current: is marked successful"
+$qbootctl -m "$slot"
+$qbootctl -n "$slot" | grep -qx "SLOT $current: is marked successful"
 echo "verified slot $current as successful"
