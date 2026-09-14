@@ -26,6 +26,8 @@ for path in "$image" "$overlay" "$firmware" "$qbootctl_source/meson.build" "$qem
 done
 release=$(<"$release_file")
 [[ $release = 7.2.5-op8-mainline ]]
+modules_source="$op8_project/artifacts/linux-7.2.5-op8/modules-root/lib/modules/$release"
+[[ -d $modules_source/kernel ]] || { echo "missing matching modules: $modules_source" >&2; exit 1; }
 mkdir -p "$mountpoint"
 mountpoint -q "$mountpoint" && { echo "refusing already-mounted target: $mountpoint" >&2; exit 1; }
 
@@ -124,6 +126,9 @@ file "$mountpoint/usr/local/bin/qbootctl" | grep -q 'ARM aarch64'
 
 # Package removal above intentionally clears generic firmware. Restore the
 # exact pinned device set and its DT-compatible path alias afterward.
+rm -rf "$mountpoint/usr/lib/modules/$release"
+install -d "$mountpoint/usr/lib/modules"
+cp -a "$modules_source" "$mountpoint/usr/lib/modules/$release"
 rm -rf "$mountpoint/usr/lib/firmware"
 install -d "$mountpoint/usr/lib/firmware/qcom/sm8250/OnePlus"
 cp -a "$firmware/." "$mountpoint/usr/lib/firmware/"

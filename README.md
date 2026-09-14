@@ -73,8 +73,13 @@ root 与图形用户的随机初始密码分别保存在 `artifacts/arch-rootfs/
 只做 RAM 临时启动：
 
 ```sh
+# 如果手机的 Arch rootfs 已存在而内核刚刚重新编译，必须先同步匹配模块。
+bash scripts/sync-running-kernel-modules.sh xein@172.16.42.1
 fastboot boot artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img
 ```
+
+即使 `uname -r` 未变化，重新链接的内核与旧模块也可能因 BTF 身份不同而不兼容；
+不得只更新 boot.img。完整 rootfs 配置流程会自动覆盖为本次构建的匹配模块。
 
 要复现当前整机环境，先在 recovery/fastbootd 明确确认设备是 IN2010 且允许清空
 `userdata`，然后写入 sparse rootfs；此命令会不可恢复地覆盖手机用户数据：
