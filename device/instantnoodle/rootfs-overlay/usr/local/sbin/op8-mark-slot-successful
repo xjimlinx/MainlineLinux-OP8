@@ -1,0 +1,38 @@
+#!/bin/sh
+# Confirm only the slot that is both running and active, after a healthy boot.
+set -eu
+
+qbootctl=/usr/local/bin/qbootctl
+[ "$(id -u)" -eq 0 ] || { echo 'must run as root' >&2; exit 1; }
+[ -x "$qbootctl" ] || { echo 'qbootctl is not installed' >&2; exit 1; }
+systemctl is-active --quiet graphical.target || {
+	echo 'graphical.target is not active; refusing slot write' >&2
+	exit 1
+}
+findmnt -nro OPTIONS / | tr ',' '\n' | grep -qx rw || {
+	echo 'root filesystem is not writable; refusing slot write' >&2
+	exit 1
+}
+root_label=$(findmnt -nro LABEL /)
+[ "$root_label" = arch-root ] || {
+	echo "unexpected root filesystem label: $root_label" >&2
+	exit 1
+}
+
+current=$($qbootctl -c | sed -n 's/^Current slot: \(_[ab]\)$/\1/p')
+active=$($qbootctl -a | sed -n 's/^Active slot: \(_[ab]\)$/\1/p')
+[ -n "$current" ] && [ "$current" = "$active" ] || {
+	echo "current/active slot mismatch: current=$current active=$active" >&2
+	exit 1
+}
+if $qbootctl -n "$current" | grep -qx "SLOT $current: is marked successful"; then
+	echo "slot $current was already marked successful"
+	exit 0
+fi
+$qbootctl -b "$current" | grep -qx "SLOT $current: is marked bootable" || {
+	echo "current slot $current is not bootable; refusing slot write" >&2
+	exit 1
+}
+$qbootctl -m "$current"
+$qbootctl -n "$current" | grep -qx "SLOT $current: is marked successful"
+echo "verified slot $current as successful"

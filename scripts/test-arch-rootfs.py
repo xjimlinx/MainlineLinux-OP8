@@ -36,6 +36,9 @@ assert 'Type: symlink' in debugfs('stat /sbin/init')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/multi-user.target.wants/op8-bluetooth-setup.service')
 assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-bluetooth-setup')
+assert 'Type: regular' in debugfs('stat /usr/local/bin/qbootctl')
+assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-mark-slot-successful')
+assert 'Type: symlink' in debugfs('stat /etc/systemd/system/timers.target.wants/op8-mark-slot-successful.timer')
 assert 'Type: regular' in debugfs('stat /usr/local/bin/op8-set-wallpaper')
 assert 'Type: regular' in debugfs('stat /usr/share/applications/op8-set-wallpaper.desktop')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/AppletConfiguration.qml')
@@ -59,6 +62,7 @@ report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size':
           'root_password_matches_private_file': 'passed', 'alarm_locked': True,
           'systemd_and_ttyGS0_getty': 'present', 'matching_modules': release,
           'op8_bluetooth_boot_setup': 'present',
+          'ab_slot_success_guard': 'present',
           'plasma_mobile_config_crash_workaround': 'present',
           'plasma_mobile_wallpaper_plugin_fallback': 'present',
           'arch_boot_image_linkage': 'passed', 'phone_flash': 'NOT PERFORMED'}

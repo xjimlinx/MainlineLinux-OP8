@@ -14,12 +14,14 @@ sparse="$op8_project/artifacts/arch-rootfs/archlinux-in2010-rootfs.sparse.img"
 overlay="$op8_project/device/instantnoodle/rootfs-overlay"
 assets="$op8_project/sources/github-references/linux-oneplus-instantnoodle"
 firmware="$assets/firmware-oneplus-instantnoodle/usr/lib/firmware"
+qbootctl_source="$op8_project/downloads/qbootctl"
 qemu=/usr/bin/qemu-aarch64-static
 [[ -x $qemu ]] || qemu="$op8_project/toolchains/qemu-test/usr/bin/qemu-aarch64-static"
+clang=${CLANG:-/usr/bin/clang}
 mountpoint="$op8_project/build/arch-rootfs-mnt"
 release_file="$op8_project/artifacts/linux-7.2.5-op8/kernel.release"
 
-for path in "$image" "$overlay" "$firmware" "$qemu" "$release_file"; do
+for path in "$image" "$overlay" "$firmware" "$qbootctl_source/meson.build" "$qemu" "$clang" "$release_file"; do
 	[[ -e $path ]] || { echo "missing required input: $path" >&2; exit 1; }
 done
 release=$(<"$release_file")
@@ -88,11 +90,37 @@ done
 if ((${#installed_generic[@]})); then
 	"${op8_chroot[@]}" /usr/bin/pacman -Rdd --noconfirm "${installed_generic[@]}"
 fi
+# Clean build-only packages left by older provisioning attempts. qbootctl is
+# cross-compiled below, so the deployed phone does not need a native toolchain.
+legacy_build_packages=()
+for package in base-devel meson; do
+	"${op8_chroot[@]}" /usr/bin/pacman -Q "$package" >/dev/null 2>&1 && \
+		legacy_build_packages+=("$package")
+done
+if ((${#legacy_build_packages[@]})); then
+	"${op8_chroot[@]}" /usr/bin/pacman -Rns --noconfirm "${legacy_build_packages[@]}"
+fi
 "${op8_chroot[@]}" /usr/bin/pacman --disable-sandbox -Syu --noconfirm --needed \
 	mesa mesa-utils plasma-mobile plasma-settings kscreen bluedevil \
 	noto-fonts-cjk greetd networkmanager sudo openssh \
 	firefox firefox-i18n-zh-cn konsole kdialog pipewire-audio pipewire-pulse \
 	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils
+
+# Build the pinned utility with the host Clang and the ARM64 rootfs as sysroot.
+# This avoids enabling binfmt_misc and avoids shipping a compiler on the phone.
+install -d "$mountpoint/usr/local/bin"
+"$clang" --target=aarch64-linux-gnu --sysroot="$mountpoint" -fuse-ld=lld \
+	-nostdlib -O2 -pipe -I"$qbootctl_source" \
+	"$mountpoint/usr/lib/Scrt1.o" "$mountpoint/usr/lib/crti.o" \
+	"$qbootctl_source/qbootctl.c" \
+	"$qbootctl_source/bootctrl_impl.c" \
+	"$qbootctl_source/gpt-utils.c" \
+	"$qbootctl_source/ufs-bsg.c" \
+	"$qbootctl_source/crc32.c" \
+	-Wl,-dynamic-linker,/usr/lib/ld-linux-aarch64.so.1 \
+	-lc "$mountpoint/usr/lib/crtn.o" \
+	-o "$mountpoint/usr/local/bin/qbootctl"
+file "$mountpoint/usr/local/bin/qbootctl" | grep -q 'ARM aarch64'
 
 # Package removal above intentionally clears generic firmware. Restore the
 # exact pinned device set and its DT-compatible path alias afterward.
@@ -106,6 +134,7 @@ chown -R root:root "$mountpoint/etc" "$mountpoint/usr/local" "$mountpoint/usr/sh
 chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
 chmod 0755 "$mountpoint/usr/local/sbin/op8-grow-root" \
 	"$mountpoint/usr/local/sbin/op8-bluetooth-setup" \
+	"$mountpoint/usr/local/sbin/op8-mark-slot-successful" \
 	"$mountpoint/usr/local/bin/op8-set-wallpaper"
 
 user_name=${OP8_USER:-xein}
@@ -133,6 +162,7 @@ sed -i 's/^#zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' "$mountpoint/etc/locale.gen"
 "${op8_chroot[@]}" /usr/bin/systemctl enable \
 	NetworkManager systemd-resolved sshd greetd bluetooth ModemManager upower
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.service
+"${op8_chroot[@]}" /usr/bin/systemctl enable op8-mark-slot-successful.timer
 "${op8_chroot[@]}" /usr/bin/systemctl set-default graphical.target
 ln -sfn ../run/systemd/resolve/stub-resolv.conf "$mountpoint/etc/resolv.conf"
 rm -f "$mountpoint/usr/bin/qemu-aarch64-static"
@@ -151,6 +181,7 @@ packages_sha=$(sha256sum "$packages_file" | awk '{print $1}')
 	printf 'target=OnePlus 8 IN2010 / instantnoodle\n'
 	printf 'kernel_release=%s\n' "$release"
 	printf 'device_assets_commit=%s\n' "$OP8_DEVICE_ASSETS_COMMIT"
+	printf 'qbootctl_commit=%s\n' "$OP8_QBOOTCTL_COMMIT"
 	printf 'raw_sha256=%s\n' "$raw_sha"
 	printf 'sparse_sha256=%s\n' "$sparse_sha"
 	printf 'packages_lock_sha256=%s\n' "$packages_sha"

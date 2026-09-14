@@ -1,0 +1,10 @@
+[Unit]
+Description=Confirm the OnePlus 8 boot slot after userspace settles
+
+[Timer]
+OnBootSec=2min
+AccuracySec=10s
+Unit=op8-mark-slot-successful.service
+
+[Install]
+WantedBy=timers.target

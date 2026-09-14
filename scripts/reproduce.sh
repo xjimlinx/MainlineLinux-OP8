@@ -8,6 +8,7 @@ jobs=${OP8_JOBS:-16}
 bash "$project/scripts/check-host.sh"
 bash "$project/scripts/fetch-linux-7.2.5-op8.sh"
 bash "$project/scripts/fetch-device-assets.sh"
+bash "$project/scripts/fetch-qbootctl.sh"
 bash "$project/scripts/fetch-rootfs.sh"
 OP8_JOBS="$jobs" bash "$project/scripts/build-linux-7.2.5-op8.sh"
 bash "$project/scripts/build-arch-rootfs.sh"

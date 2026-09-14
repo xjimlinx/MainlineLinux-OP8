@@ -1,0 +1,8 @@
+[Unit]
+Description=Mark the healthy OnePlus 8 A/B slot successful
+After=graphical.target
+ConditionPathExists=/usr/local/bin/qbootctl
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/op8-mark-slot-successful

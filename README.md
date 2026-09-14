@@ -48,6 +48,7 @@ bash scripts/fetch-linux-7.2.5-op8.sh
 
 # 获取固定提交的 OP8 固件/ALSA 配置和固定校验和的 Arch rootfs
 bash scripts/fetch-device-assets.sh
+bash scripts/fetch-qbootctl.sh
 bash scripts/fetch-rootfs.sh
 
 # 构建 7.2.5-op8-mainline、DTB 与模块
@@ -96,6 +97,17 @@ Linux 7.2.5 已验证显示、触摸、freedreno、UFS、USB ACM/NCM、Wi-Fi、
 本机只读 `bluetooth_a` 分区提取与硬件匹配的 `htbtfw20.tlv`/`htnv20.bin`，
 并为缺少出厂公共地址的控制器生成随本次安装保持稳定的本地地址；专有固件不会
 复制进 Git 仓库。蓝牙配对、A2DP 实际播放以及麦克风长期录音仍需继续回归。
+
+USB-C DisplayPort Alt Mode 的供电、Type-C 能力声明和内核协议驱动已加入；USB-C
+转 HDMI 扩展坞由扩展坞将 DP 转换为 HDMI，仍需用新 boot.img 在真机完成 HPD、链路训练、
+热插拔及 USB host 共存回归。rootfs 包含固定提交构建的 `qbootctl` 和延迟两分钟的槽位
+确认服务；服务只在图形目标启动、根文件系统可写且当前槽等于活动槽时标记 successful。
+高通 A/B 的 tries_remaining 字段上限是 7，不能设置“无限次数”；successful 标记才是
+正常启动后停止递减的机制。
+
+当前不能直接安装传统 PC 式 GRUB：一加 ABL 需要 Android header-v2 boot.img，而 GRUB
+ARM64 需要提供 UEFI Boot Services 的固件和 ESP。若以后完成 ABL -> U-Boot/EDK2 -> GRUB
+这一级引导移植，才可把 GRUB 用作二级菜单；现阶段仍使用 ABL 兼容 boot.img。
 
 ## 当前诊断组件
 
