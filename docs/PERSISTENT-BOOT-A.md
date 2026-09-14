@@ -2,16 +2,15 @@
 
 最后验证：2026-09-14，设备序列号 `d967403e`。
 
-当前最新修复尚未写入分区：7nm DSI PLL 三次重试和非阻塞蓝牙/WKD 启动修复已在工作树
-和临时 rootfs 上验证，需下一次 fastboot 临时启动确认反色后，才允许更新 A 槽。
+当前最终修复已写入 `boot_a` 并完成正常重启验证；没有写入 `boot_b` 或 userdata。
 
-后续修复提交：`df767446842a25bdcc0bef14cb94df4f76c38f1d`（PS_HOLD 安全调用、
-PM8009 重复 PON），以及 `527a6d9f3d1bd1c69f5239fa877cd43d16a47249`（面板 DCS
-反色状态清理），`ecc4a6c728da2ec35d984e0131dbe3678d1a80c2`（7nm DSI PLL warm-reboot 重试）。
+相关修复提交：`df767446842a25bdcc0bef14cb94df4f76c38f1d`（PS_HOLD 安全调用、
+PM8009 重复 PON）、`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`（早期面板修复），以及
+`cc62123b8`（面板 AVDD 极性、simple-framebuffer 和 DSI 初始化整理）。
 
-2026-09-14 13:45 已重新编译并将包含上述面板修复的 7.2.5 内核写入 `boot_a`；
-设备随后从 A 槽重新启动，屏幕通过 KMS 抓帧确认颜色正常。新的带 AVB 尾部镜像
-SHA-256 为 `3390a3de52ee14b7b5ea78e7bd8a053a6fd61d45eb7735b0f76a14e5ba00b688`。
+2026-09-14 已重新编译并将最终 7.2.5 内核写入 `boot_a`；设备随后从 A 槽正常重启，
+屏幕由用户确认颜色正常。镜像 SHA-256 为
+`60ff7408d8c5ab70c7bd56aebe9549794781efe180f1b5678704d2d49a6a4a5e`。
 
 ## 结果
 
@@ -140,6 +139,6 @@ boot image 没有固化。
 
 修复版日志为 `msm-restart c264000.restart: secure PS_HOLD deassertion available`。
 普通 `sudo reboot` 已自动回到 A 槽 Linux；`reboot bootloader` 的 PS_HOLD 复位也成功，
-但 OnePlus ABL 对 PON magic 的解释仍可能继续选择 normal boot。面板初始化序列在
-vendor 解锁和 normal mode 后各加入一次 `MIPI_DCS_EXIT_INVERT_MODE (0x20)`，用于清理
-warm reboot 后偶发的反色锁存；完整镜像重新刷入后当前画面已确认正常。
+但 OnePlus ABL 对 PON magic 的解释仍可能继续选择 normal boot。当前面板初始化序列
+匹配参考 vendor 序列，DTS 的 AVDD 极性和 simple-framebuffer handoff 已修正；完整
+镜像重新刷入后当前画面已确认正常。

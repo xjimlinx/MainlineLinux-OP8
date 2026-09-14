@@ -2,12 +2,12 @@
 
 ## Latest boot investigation
 
-一次普通 warm reboot 仍复现了偶发反色。旧版内核日志在首次 DSI 初始化记录
-`DSI PLL(0) lock failed, status=0x00000000`，随后才恢复并进入图形界面；本次重新
-编译的 7nm DSI PHY 在锁定失败后完整关闭/重启 PLL，最多重试 3 次，避免将异常的首个
-DSI 命令流发送给 AMB655UV01 面板。新临时 boot image hash 为
-`c6d3b4c491969063958f9dcb5aaad1aae49b54e83a15dfb812548d4d1ee1d5c3`，尚待 fastboot
-临时启动和多次 warm reboot 回归后再写入 A 槽。
+静态分析确认面板 AVDD 固定稳压器缺少 `enable-active-high`，导致
+`regulator-fixed` 将 GPIO61 按低有效处理；同时禁用 bootloader 的 simple-framebuffer，
+让 msm_dpu 独立初始化面板。7nm DSI PLL 的实验性三次重试会造成重复时钟关闭警告，已
+回退到基线实现。当前镜像 hash 为
+`60ff7408d8c5ab70c7bd56aebe9549794781efe180f1b5678704d2d49a6a4a5e`，已写入 A 槽并
+完成正常重启验证。
 
 启动日志“卡住”并非 fastboot：实测 `op8-bluetooth-setup.service` 反复等待约 35 秒，
 同时 Arch 默认 `archlinux-keyring-wkd-sync.service` 因网络 WKD 查询可持续数分钟。
@@ -42,11 +42,9 @@ IN2010 已从 A 槽的 `boot_a` 正常启动 `7.2.5-op8-mainline`，不是
 已修复：主线内核加入 Kona 的 `qcom,pshold` 节点（`0x0c264000`）、禁用 PM8009 重复
 reboot-mode 注册，并移植 Qualcomm SCM `DEASSERT_PS_HOLD` 调用。真机日志确认
 `secure PS_HOLD deassertion available`，普通 `sudo reboot` 已自动回到 A 槽 Linux。
-AMB655UV01 面板上电序列在 vendor 解锁和 normal mode 后各加入一次 DCS
-`EXIT_INVERT_MODE (0x20)`，清理 warm reboot 后可能残留的反色状态。提交为
-`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`；7nm PLL 重试为
-`ecc4a6c728da2ec35d984e0131dbe3678d1a80c2`。完整 AVB 镜像已恢复并刷入 A 槽，
-设备当前画面已由用户确认正常。
+AMB655UV01 面板改为参考 vendor 初始化序列，不再加入未经证实的 DCS 反色补偿；DTS
+补充 AVDD 有效电平并禁用 simple-framebuffer。最终修复提交为
+`cc62123b8`，完整镜像已刷入 A 槽，设备多次正常重启且当前画面由用户确认正常。
 
 ## Plasma Mobile configuration crash workaround
 
@@ -91,20 +89,19 @@ has also been confirmed working by the user.
 
 ## Linux 7.2.5 validation
 
-The IN2010 has successfully temporary-booted the locally built
+The IN2010 has successfully booted the persistently installed
 `7.2.5-op8-mainline` kernel into the installed Arch Linux ARM root filesystem.
 UFS/ext4 root, USB ACM+NCM, SSH, DRM, the Samsung AMB655UV01 panel, freedreno
-firmware, KWin Wayland and Plasma Mobile all reached userspace. No phone boot
-partition was written; rebooting still falls back to the previously installed
-kernel.
+firmware, KWin Wayland and Plasma Mobile all reached userspace. `boot_a` is the
+active persistent slot; `boot_b` remains available as fallback.
 
 The test image is `artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img`
-(SHA-256 `c6d3b4c491969063958f9dcb5aaad1aae49b54e83a15dfb812548d4d1ee1d5c3`).
+(SHA-256 `60ff7408d8c5ab70c7bd56aebe9549794781efe180f1b5678704d2d49a6a4a5e`).
 Matching 7.2.5 modules are installed under
 `/usr/lib/modules/7.2.5-op8-mainline` on the Arch root filesystem.
 The corresponding source snapshot is published as branch `7.2.5-op8` at
 `https://github.com/xjimlinx/mainline-instantnoodle` (commit
-`ecc4a6c728da2ec35d984e0131dbe3678d1a80c2`).
+`cc62123b8`).
 
 The panel inversion regression was traced to regulator late cleanup disabling
 `panel_avdd_5p5` while the panel was active, followed by an unbalanced disable.
