@@ -44,7 +44,8 @@ reboot-mode 注册，并移植 Qualcomm SCM `DEASSERT_PS_HOLD` 调用。真机�
 `secure PS_HOLD deassertion available`，普通 `sudo reboot` 已自动回到 A 槽 Linux。
 AMB655UV01 面板上电序列在 vendor 解锁和 normal mode 后各加入一次 DCS
 `EXIT_INVERT_MODE (0x20)`，清理 warm reboot 后可能残留的反色状态。提交为
-`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`；完整 AVB 镜像已恢复并刷入 A 槽，
+`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`；7nm PLL 重试为
+`ecc4a6c728da2ec35d984e0131dbe3678d1a80c2`。完整 AVB 镜像已恢复并刷入 A 槽，
 设备当前画面已由用户确认正常。
 
 ## Plasma Mobile configuration crash workaround
@@ -103,7 +104,7 @@ Matching 7.2.5 modules are installed under
 `/usr/lib/modules/7.2.5-op8-mainline` on the Arch root filesystem.
 The corresponding source snapshot is published as branch `7.2.5-op8` at
 `https://github.com/xjimlinx/mainline-instantnoodle` (commit
-`eb5ded2cafbca9e93ad6f6f388d11693cee09d58`).
+`ecc4a6c728da2ec35d984e0131dbe3678d1a80c2`).
 
 The panel inversion regression was traced to regulator late cleanup disabling
 `panel_avdd_5p5` while the panel was active, followed by an unbalanced disable.
