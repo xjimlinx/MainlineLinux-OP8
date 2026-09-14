@@ -34,9 +34,22 @@ sudo tar -xJf data.tar.xz -C /
 
 ## WPS Office
 
-WPS 官方 Linux 下载页提供 `.deb`/`.rpm` 路线，但安装前必须确认包架构与系统匹配。当前未确认有适用于本机 `aarch64` 的官方 Linux 包，因此不安装 x86_64 包，也不把它标记为已支持。
+WPS 普通 Linux 下载页的 X64 包不是全部选项；该页明确将 ARM 等架构引导到 WPS 365。WPS 365 当前提供 Linux ARM64 测试包：
 
-可选方案：使用 ARM64 原生的 LibreOffice/OnlyOffice；或以后在 Waydroid 中测试 Android ARM64 版 WPS。两种方案都与原生 Linux WPS 包分开记录。
+- 版本：`12.1.2.28080.AK.preread.sw`，构建 `765470`
+- 官方 CDN：`https://pubwps-wps365-obs.wpscdn.cn/download/Linux/28080/wps-office_12.1.2.28080.AK.preread.sw.365_765470_arm64.deb`
+- SHA-256：`62c0ee6b69d998b01bcea3112d3d2c40c815c0c107c0a5c06509eaf2adf6c2bd`
+- 当前状态：已安装到手机 `/opt/kingsoft/wps-office`，`wps`、`et`、`wpp`、`wpspdf` 均为 ARM64 ELF，桌面入口已刷新。
+
+本次使用项目脚本 [`scripts/install-wps365-arm64.sh`](../scripts/install-wps365-arm64.sh) 解包并运行厂商 `postinst`；由于系统是 Arch Linux ARM，未使用 `dpkg` 注册包。
+
+WPS 365 ARM 包仍标为 testing，首次启动和登录应从 Plasma 应用菜单执行 `/usr/bin/wps`，不要在无图形 SSH 会话中强行启动。
+
+## Blender / OBS Studio
+
+- Arch Linux ARM 当前仓库没有 `blender` 或 `obs-studio` 原生包。
+- Blender 官方下载页当前提供 Linux x86_64 包，ARM 下载项主要是 Windows ARM；在本机直接安装官方 Linux 包不可行。后续可评估源码编译，但手机 GPU、内存和编译时间会是主要限制。
+- OBS Studio 没有可直接安装的 ARM64 Linux 官方发行包；源码可以尝试编译，浏览器/CEF、硬件编码和采集插件需要单独适配。暂不安装不匹配的 x86_64 包。
 
 ## 本次验证清单
 

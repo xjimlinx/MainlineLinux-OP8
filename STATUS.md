@@ -1,6 +1,6 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-14
 
-应用部署记录（QQ / Steam / WPS）见 [`docs/APP-DEPLOYMENT.md`](docs/APP-DEPLOYMENT.md)。QQ ARM64 已部署；Steam/WPS 的架构限制与后续方案已记录。
+应用部署记录（QQ / Steam / WPS / Blender / OBS）见 [`docs/APP-DEPLOYMENT.md`](docs/APP-DEPLOYMENT.md)。QQ 与 WPS 365 ARM64 已部署；Steam、Blender、OBS 的架构限制与后续方案已记录。
 
 ## 基带 PCIe 已屏蔽
 
