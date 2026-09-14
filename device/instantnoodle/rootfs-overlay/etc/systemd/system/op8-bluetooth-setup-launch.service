@@ -1,0 +1,6 @@
+[Unit]
+Description=Queue OnePlus 8 Bluetooth initialization without blocking boot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl start --no-block op8-bluetooth-setup.service

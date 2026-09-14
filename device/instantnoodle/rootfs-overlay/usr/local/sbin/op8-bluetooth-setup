@@ -26,10 +26,13 @@ trap - EXIT
 # Never let a generic linux-firmware file override the phone-matched raw file.
 rm -f "$firmware_dir/htbtfw20.tlv.zst" "$firmware_dir/htnv20.bin.zst"
 
-# The driver may have been cold-plugged before local-fs.target. Re-probe after
-# the stock firmware is in place and before bluetoothd opens the controller.
-modprobe -r hci_uart 2>/dev/null || true
-modprobe hci_uart
+# The driver may have been cold-plugged before local-fs.target. Re-probe only
+# when bluetoothd is not already using it; the timer intentionally runs after
+# the graphical boot so it must not tear down an active controller.
+if ! systemctl is-active --quiet bluetooth.service; then
+	timeout 3s modprobe -r hci_uart 2>/dev/null || true
+	modprobe hci_uart
+fi
 
 hci=
 for _ in $(seq 1 100); do
@@ -55,6 +58,12 @@ address=$(printf '02:%s:%s:%s:%s:%s' \
 	tr '[:lower:]' '[:upper:]')
 index=${hci#hci}
 
+# The controller may already have the stable address from a previous boot;
+# btmgmt correctly rejects rewriting an active public address in that case.
+if btmgmt --index "$index" info 2>/dev/null | grep -q "addr $address "; then
+	exit 0
+fi
+
 for _ in $(seq 1 20); do
 	if btmgmt --index "$index" public-addr "$address"; then
 		exit 0
@@ -62,5 +71,11 @@ for _ in $(seq 1 20); do
 	sleep 0.5
 done
 
+# A controller with a valid address is usable even when firmware refuses a
+# late address write (for example while bluetoothd is already connected).
+if btmgmt --index "$index" info 2>/dev/null | grep -q '^hci'; then
+	echo "Keeping existing address on $hci after late address-write rejection" >&2
+	exit 0
+fi
 echo "Failed to configure $hci with $address" >&2
 exit 1

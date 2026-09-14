@@ -1,4 +1,18 @@
-# Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-13
+# Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-14
+
+## Latest boot investigation
+
+一次普通 warm reboot 仍复现了偶发反色。旧版内核日志在首次 DSI 初始化记录
+`DSI PLL(0) lock failed, status=0x00000000`，随后才恢复并进入图形界面；本次重新
+编译的 7nm DSI PHY 在锁定失败后完整关闭/重启 PLL，最多重试 3 次，避免将异常的首个
+DSI 命令流发送给 AMB655UV01 面板。新临时 boot image hash 为
+`c6d3b4c491969063958f9dcb5aaad1aae49b54e83a15dfb812548d4d1ee1d5c3`，尚待 fastboot
+临时启动和多次 warm reboot 回归后再写入 A 槽。
+
+启动日志“卡住”并非 fastboot：实测 `op8-bluetooth-setup.service` 反复等待约 35 秒，
+同时 Arch 默认 `archlinux-keyring-wkd-sync.service` 因网络 WKD 查询可持续数分钟。
+蓝牙初始化现由 timer + 瞬时 launcher 放到后台，WKD timer 已禁用；当前图形目标约
+5 秒达到，蓝牙控制器仍能正常出现并保留稳定地址。
 
 ## SDDM touch login
 
@@ -66,8 +80,10 @@ earpiece/headset routing remain unvalidated.
 QCA6390 Bluetooth now loads the phone-matched firmware and NVM read-only from
 the stock `bluetooth_a` partition. Because this NVM exposes the controller
 without a usable public address, `op8-bluetooth-setup.service` assigns a stable
-locally administered address derived from the installation machine-id. BlueZ
-then reports BR/EDR and LE support and a live scan discovered nearby devices.
+locally administered address derived from the installation machine-id. The setup
+is queued by a non-blocking boot timer, and the Arch keyring WKD refresh timer is
+disabled so network availability cannot delay the graphical target. BlueZ then
+reports BR/EDR and LE support and a live scan discovered nearby devices.
 Actual pairing and A2DP playback still need a user-selected peer. RFCOMM and
 BNEP have been enabled for the next matched kernel/module build. The flashlight
 has also been confirmed working by the user.
@@ -82,7 +98,7 @@ partition was written; rebooting still falls back to the previously installed
 kernel.
 
 The test image is `artifacts/linux-7.2.5-op8/boot-in2010-linux-7.2.5.img`
-(SHA-256 `e1a6c42d675fcfad365675e98a9189d893c069642489bce0ae3bdd5518317fa5`).
+(SHA-256 `c6d3b4c491969063958f9dcb5aaad1aae49b54e83a15dfb812548d4d1ee1d5c3`).
 Matching 7.2.5 modules are installed under
 `/usr/lib/modules/7.2.5-op8-mainline` on the Arch root filesystem.
 The corresponding source snapshot is published as branch `7.2.5-op8` at
@@ -96,10 +112,9 @@ normal-color latch, uses the vendor 8/4/6 vertical porch, and uses the complete
 IN2010 initialization table. The fix is committed in the kernel worktree as
 `d51f4884ca39d7e7846329f8f77e13fe09c5cee9` and is present in the 7.2.5 image.
 
-Remaining display work: the first modeset still records a recovered DSI PLL
-lock retry and one `dsi_err_worker: status=5`. The desktop remains running, but
-screen off/on and longer suspend stress must pass before replacing the installed
-boot image.
+Remaining display work: verify the new 7nm PLL retry with repeated warm reboots and
+screen off/on stress before replacing the installed boot image. The previous kernel
+still has a probabilistic inversion report; it is not claimed fixed until this test.
 
 ## Running Arch deployment
 

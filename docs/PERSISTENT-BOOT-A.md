@@ -2,6 +2,9 @@
 
 最后验证：2026-09-14，设备序列号 `d967403e`。
 
+当前最新修复尚未写入分区：7nm DSI PLL 三次重试和非阻塞蓝牙/WKD 启动修复已在工作树
+和临时 rootfs 上验证，需下一次 fastboot 临时启动确认反色后，才允许更新 A 槽。
+
 后续修复提交：`df767446842a25bdcc0bef14cb94df4f76c38f1d`（PS_HOLD 安全调用、
 PM8009 重复 PON），以及 `527a6d9f3d1bd1c69f5239fa877cd43d16a47249`（面板 DCS
 反色状态清理）。
@@ -69,11 +72,17 @@ avbtool info_image \
   --image artifacts/linux-7.2.5-op8/persistent/boot-in2010-linux-7.2.5-avb.img
 ```
 
-本次生成并实际刷写的完整分区镜像：
+此前生成并实际刷写的完整分区镜像：
 
 ```text
 size:   100663296 bytes
 sha256: 3390a3de52ee14b7b5ea78e7bd8a053a6fd61d45eb7735b0f76a14e5ba00b688
+```
+
+最新未刷写镜像（包含 7nm PLL 重试）hash：
+
+```text
+sha256: bfdca81f1f4b9d1b85a44b2bce080fb6cea6663cbb709861aea1c9ba75368231
 ```
 
 ## 本次实际刷写步骤

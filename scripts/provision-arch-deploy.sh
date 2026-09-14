@@ -207,7 +207,11 @@ sed -i 's/^#zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' "$mountpoint/etc/locale.gen"
 "${op8_chroot[@]}" /usr/bin/systemctl enable \
 	NetworkManager systemd-resolved sshd sddm seatd bluetooth ModemManager upower
 "${op8_chroot[@]}" /usr/bin/systemctl disable greetd
-"${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.service
+# WKD key refresh is network-dependent and may be left running by a
+# persistent timer after a long power-off; it must not gate phone boot.
+"${op8_chroot[@]}" /usr/bin/systemctl disable archlinux-keyring-wkd-sync.timer
+"${op8_chroot[@]}" /usr/bin/systemctl disable op8-bluetooth-setup.service
+"${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.timer
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-mark-slot-successful.timer
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-typec-monitor.service
 "${op8_chroot[@]}" /usr/bin/systemctl set-default graphical.target

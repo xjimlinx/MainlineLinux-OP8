@@ -1,0 +1,11 @@
+[Unit]
+Description=Initialize OnePlus 8 QCA6390 Bluetooth in the background
+
+[Timer]
+OnBootSec=8s
+Unit=op8-bluetooth-setup-launch.service
+AccuracySec=1s
+Persistent=no
+
+[Install]
+WantedBy=timers.target
