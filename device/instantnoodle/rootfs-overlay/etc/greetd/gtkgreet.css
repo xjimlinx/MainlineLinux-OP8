@@ -1,0 +1,14 @@
+window {
+	font-size: 24px;
+}
+
+button {
+	min-height: 72px;
+	min-width: 260px;
+	padding: 12px 24px;
+}
+
+entry {
+	min-height: 68px;
+	font-size: 24px;
+}

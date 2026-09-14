@@ -1,10 +1,6 @@
 [terminal]
 vt = 7
 
-[initial_session]
-command = "/usr/local/bin/op8-plasma-session"
-user = "xein"
-
 [default_session]
-command = "agreety --cmd /usr/local/bin/op8-plasma-session"
+command = "cage -s -- gtkgreet -s /etc/greetd/gtkgreet.css"
 user = "greeter"

@@ -20,7 +20,7 @@ if command -v kdialog >/dev/null 2>&1; then
 fi
 
 if ! sudo -n /usr/local/sbin/op8-switch-plasma-session "$target"; then
-	message="无法切换到 ${target_name}。请检查 plasma-desktop 是否安装以及 greetd 日志。"
+	message="无法切换到 ${target_name}。请检查 plasma-desktop 是否安装以及 SDDM 日志。"
 	if command -v kdialog >/dev/null 2>&1; then
 		kdialog --title '切换失败' --error "$message"
 	else

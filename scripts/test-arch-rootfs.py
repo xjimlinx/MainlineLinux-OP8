@@ -42,6 +42,14 @@ assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-typec-monitor')
 assert 'Type: symlink' in debugfs('stat /etc/systemd/system/timers.target.wants/op8-mark-slot-successful.timer')
 assert 'Type: regular' in debugfs('stat /usr/local/bin/op8-set-wallpaper')
 assert 'Type: regular' in debugfs('stat /usr/share/applications/op8-set-wallpaper.desktop')
+assert 'Type: regular' in debugfs('stat /usr/local/bin/op8-plasma-session')
+assert 'Type: regular' in debugfs('stat /usr/local/sbin/op8-switch-plasma-session')
+assert 'Type: regular' in debugfs('stat /opt/v2rayN/v2rayN')
+assert 'Type: regular' in debugfs('stat /usr/share/applications/v2rayN.desktop')
+assert 'Type: regular' in debugfs('stat /opt/wechat/wechat')
+assert 'Type: symlink' in debugfs('stat /usr/bin/wechat')
+assert 'Type: regular' in debugfs('stat /usr/share/applications/wechat.desktop')
+assert 'Type: symlink' in debugfs('stat /usr/bin/codex')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/AppletConfiguration.qml')
 assert 'Type: regular' in debugfs('stat /usr/share/plasma/shells/org.kde.plasma.mobileshell/contents/configuration/private/ChangeWallpaperModule.qml')
 release = (P / 'artifacts/linux-7.2.5-op8/kernel.release').read_text().strip()
@@ -66,6 +74,10 @@ report = {'ext4_e2fsck': 'passed', 'label': 'arch-root', 'sparse_expanded_size':
           'ab_slot_success_guard': 'present',
           'plasma_mobile_config_crash_workaround': 'present',
           'plasma_mobile_wallpaper_plugin_fallback': 'present',
+          'plasma_session_switcher': 'present',
+          'v2rayn_linux_arm64': 'present',
+          'wechat_linux_arm64': 'present',
+          'codex_cli_linux_arm64': 'present',
           'arch_boot_image_linkage': 'passed', 'phone_flash': 'NOT PERFORMED'}
 (out / 'test-results.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report, indent=2))

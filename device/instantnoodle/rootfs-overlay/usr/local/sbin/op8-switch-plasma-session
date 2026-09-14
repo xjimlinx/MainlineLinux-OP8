@@ -1,5 +1,5 @@
 #!/bin/sh
-# Persist the requested shell and ask greetd to replace the graphical session.
+# Persist the requested shell and ask SDDM to replace the graphical session.
 set -eu
 
 test "$(id -u)" -eq 0 || {
@@ -44,7 +44,7 @@ mv -f "$temporary" "$mode_file"
 trap - EXIT HUP INT TERM
 
 # The user manager remains alive while SSH is connected, so Plasma's user
-# services can outlive the greetd PAM session. Stop them explicitly; otherwise
+# services can outlive the SDDM PAM session. Stop them explicitly; otherwise
 # the new Mobile/Desktop launcher would reuse the old shell and compositor.
 session_user=${SUDO_USER:-xein}
 session_uid=$(id -u "$session_user")
@@ -58,8 +58,6 @@ if test -S "$runtime_dir/bus"; then
 fi
 
 # --no-block lets this request survive the teardown of the calling session.
-# greetd records that its one-shot initial session already ran in this volatile
-# file. Remove it so a daemon restart performs the configured xein autologin
-# instead of stopping at the agreety text login.
-rm -f /run/greetd.run
-systemctl --no-block restart greetd.service
+# SDDM will present its graphical greeter again and the user can choose the
+# requested Wayland session from the touch-friendly session selector.
+systemctl --no-block restart sddm.service

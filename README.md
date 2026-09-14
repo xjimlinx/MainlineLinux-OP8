@@ -2,9 +2,12 @@
 
 目标：原生 Linux + Arch Linux ARM 用户空间，不依赖 Android 运行。
 
-本工程已完成并在 IN2010 真机临时启动 Linux 7.2.5、OP8 专用 DTB、
+本工程已完成并在 IN2010 真机启动 Linux 7.2.5、OP8 专用 DTB、
 Arch Linux ARM、Plasma Mobile、USB ACM/NCM 及 freedreno GPU。
-**目前只验证了 `fastboot boot`；显示休眠、充电和温控回归完成前，不要永久刷写。**
+2026-09-14 已验证带 AVB footer 的镜像可以从 A 槽持久启动，并已将 A 槽标记为
+active、successful、bootable；完整刷写记录、哈希、验证和恢复入口见
+[A 槽持久启动记录](docs/PERSISTENT-BOOT-A.md)。Linux 最终关机/硬件复位偶尔卡住仍是
+独立的待修问题，不代表 A 槽镜像未固化。
 禁止把 instantnoodlep（8 Pro）或 kebab（8T）的参考 DTB 当成 instantnoodle（8）的成品。
 本工程的构建脚本不读取或修改工程目录外的 Android/recovery 文件。
 
@@ -50,6 +53,8 @@ bash scripts/fetch-linux-7.2.5-op8.sh
 bash scripts/fetch-device-assets.sh
 bash scripts/fetch-qbootctl.sh
 bash scripts/fetch-rootfs.sh
+bash scripts/fetch-v2rayn.sh
+bash scripts/fetch-wechat.sh
 
 # 构建 7.2.5-op8-mainline、DTB 与模块
 OP8_JOBS=16 bash scripts/build-linux-7.2.5-op8.sh
@@ -104,14 +109,26 @@ Linux 7.2.5 已验证显示、触摸、freedreno、UFS、USB ACM/NCM、Wi-Fi、
 复制进 Git 仓库。蓝牙配对、A2DP 实际播放以及麦克风长期录音仍需继续回归。
 
 Plasma Mobile 与 Plasma Desktop 是两个独立的 Wayland 会话，不能在保留窗口的情况下
-原地变成类似 DeX 的 PC 模式。系统同时安装两者，并提供“切换手机/桌面模式”应用：它会
-保存目标模式并让 greetd 立即重新建立图形会话，不重启手机；切换会关闭当前所有窗口，
-需要先保存工作。命令行也可使用
+原地变成类似 DeX 的 PC 模式。现在由 SDDM 的 OP8-Breeze QML greeter 提供触摸友好的图形登录界面，
+会列出“Plasma Mobile（手机模式）”和“Plasma（桌面模式）”两个会话，可在登录前点击选择；
+系统同时安装两者，并提供“切换手机/桌面模式”应用：它会保存目标模式并让 SDDM 重新建立图形会话，
+不重启手机；切换会关闭当前所有窗口，需要先保存工作。SDDM 登录器当前使用 X11 作为稳定的显示层，
+登录后的 Plasma 会话仍然是 Wayland。SDDM 没有单独的“Mobile 版”，手机体验由 Plasma Mobile 会话和
+可替换的 QML 主题决定。OP8-Breeze 将 greeter 缩放设为 2 倍，安装 Qt Virtual Keyboard，
+密码框获得焦点后会自动弹出中文/英文虚拟键盘；键盘顶部保留登录器会话选择入口。命令行也可使用
 `sudo /usr/local/sbin/op8-switch-plasma-session mobile|desktop`。
 
 rootfs 同时安装固定版本的 Linux ARM64 Codex CLI、Node.js、Git 与 ripgrep。首次使用时
 在 Konsole 中运行 `codex login`（或设置自己的 `OPENAI_API_KEY`）；登录状态属于手机用户，
 不会被构建脚本写入镜像或 Git。可在构建时用 `OP8_CODEX_VERSION=x.y.z` 显式选择其他版本。
+系统也包含固定版本和 SHA-256 的官方 v2rayN Linux ARM64 便携包，应用菜单可直接启动；
+订阅地址、节点和认证信息只保存在用户目录，不进入仓库。
+中文输入使用 Fcitx 5、中文扩展与拼音词库，KWin 通过 Wayland 输入法接口启动它；
+默认用 `Ctrl+Space` 在英文键盘与拼音之间切换，配置工具为 `fcitx5-configtool`。
+会话切换器在 PC 桌面模式选择 Fcitx 5，在 Mobile 模式恢复自带 Plasma Keyboard；
+后者包含 Qt Pinyin 插件，因此不会因为安装 Fcitx 而丢失手机触屏键盘。
+腾讯官方 Linux ARM64 微信也按版本与 SHA-256 固定安装；首次启动显示二维码，账号数据仅
+保存在图形用户的主目录，不会进入构建仓库或生成的公共输入文件。
 
 USB-C DisplayPort Alt Mode 的供电、Type-C 能力声明和内核协议驱动已加入；USB-C
 转 HDMI 扩展坞由扩展坞将 DP 转换为 HDMI，仍需用新 boot.img 在真机完成 HPD、链路训练、

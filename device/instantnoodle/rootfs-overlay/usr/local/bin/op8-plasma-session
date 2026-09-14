@@ -1,11 +1,11 @@
 #!/bin/sh
 # Start the selected Plasma shell. Plasma Mobile and Plasma Desktop are
-# separate Wayland sessions, so greetd invokes this dispatcher after login.
+# separate Wayland sessions, so SDDM invokes this dispatcher after login.
 set -eu
 
 mode_file=/var/lib/op8-plasma-session/mode
-mode=mobile
-if test -r "$mode_file"; then
+mode=${1:-mobile}
+if test "$#" -eq 0 && test -r "$mode_file"; then
 	IFS= read -r mode <"$mode_file" || mode=mobile
 fi
 
@@ -18,9 +18,17 @@ case "$mode" in
 	systemctl --user unset-environment PLASMA_DEFAULT_SHELL PLASMA_PLATFORM \
 		QT_QUICK_CONTROLS_MOBILE PLASMA_INTEGRATION_USE_PORTAL \
 		XDG_CONFIG_DIRS 2>/dev/null || true
+	kwriteconfig6 --file kwinrc --group Wayland --key InputMethod \
+		/usr/share/applications/org.fcitx.Fcitx5.desktop
 	session=/usr/bin/startplasma-wayland
 	;;
-	mobile) session=/usr/bin/startplasmamobile ;;
+	mobile)
+	# Keep Plasma Mobile's touch keyboard. Qt Virtual Keyboard includes its
+	# Pinyin plugin, while Fcitx remains the physical-keyboard IME for Desktop.
+	kwriteconfig6 --file kwinrc --group Wayland --key InputMethod \
+		/usr/share/applications/org.kde.plasma.keyboard.desktop
+	session=/usr/bin/startplasmamobile
+	;;
 	*)
 		echo "invalid Plasma session mode '$mode'; falling back to mobile" >&2
 		session=/usr/bin/startplasmamobile

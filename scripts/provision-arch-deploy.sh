@@ -15,13 +15,15 @@ overlay="$op8_project/device/instantnoodle/rootfs-overlay"
 assets="$op8_project/sources/github-references/linux-oneplus-instantnoodle"
 firmware="$assets/firmware-oneplus-instantnoodle/usr/lib/firmware"
 qbootctl_source="$op8_project/downloads/qbootctl"
+v2rayn_archive="$op8_project/downloads/v2rayN/$OP8_V2RAYN_VERSION/v2rayN-linux-arm64.zip"
+wechat_archive="$op8_project/downloads/wechat/WeChatLinux_arm64.deb"
 qemu=/usr/bin/qemu-aarch64-static
 [[ -x $qemu ]] || qemu="$op8_project/toolchains/qemu-test/usr/bin/qemu-aarch64-static"
 clang=${CLANG:-/usr/bin/clang}
 mountpoint="$op8_project/build/arch-rootfs-mnt"
 release_file="$op8_project/artifacts/linux-7.2.5-op8/kernel.release"
 
-for path in "$image" "$overlay" "$firmware" "$qbootctl_source/meson.build" "$qemu" "$clang" "$release_file"; do
+for path in "$image" "$overlay" "$firmware" "$qbootctl_source/meson.build" "$v2rayn_archive" "$wechat_archive" "$qemu" "$clang" "$release_file"; do
 	[[ -e $path ]] || { echo "missing required input: $path" >&2; exit 1; }
 done
 release=$(<"$release_file")
@@ -109,10 +111,11 @@ if ((${#legacy_build_packages[@]})); then
 fi
 "${op8_chroot[@]}" /usr/bin/pacman --disable-sandbox -Syu --noconfirm --needed \
 	mesa mesa-utils plasma-mobile plasma-desktop plasma-settings kscreen bluedevil \
-	noto-fonts-cjk greetd networkmanager sudo openssh \
+	noto-fonts-cjk greetd greetd-gtkgreet cage sddm qt6-virtualkeyboard networkmanager sudo openssh \
 	firefox firefox-i18n-zh-cn konsole kdialog pipewire-audio pipewire-pulse \
 	wireplumber plasma-pa alsa-utils rtkit modemmanager upower bluez bluez-utils \
-	nodejs npm git ripgrep
+	nodejs npm git ripgrep fcitx5 fcitx5-gtk fcitx5-qt \
+	fcitx5-chinese-addons fcitx5-configtool fcitx5-pinyin-zhwiki fcitx5-breeze
 
 # Codex publishes a native Linux ARM64 payload through this architecture-aware
 # npm package. Pin the version so rebuilding does not silently change the CLI.
@@ -146,6 +149,20 @@ install -d "$mountpoint/usr/lib/firmware/qcom/sm8250/OnePlus"
 cp -a "$firmware/." "$mountpoint/usr/lib/firmware/"
 cp -a "$firmware/qcom/sm8250/OnePlus8/." \
 	"$mountpoint/usr/lib/firmware/qcom/sm8250/OnePlus/"
+rm -rf "$mountpoint/opt/v2rayN" "$mountpoint/opt/v2rayN-linux-arm64"
+install -d "$mountpoint/opt"
+bsdtar -xf "$v2rayn_archive" -C "$mountpoint/opt"
+mv "$mountpoint/opt/v2rayN-linux-arm64" "$mountpoint/opt/v2rayN"
+chown -R root:root "$mountpoint/opt/v2rayN"
+chmod 0755 "$mountpoint/opt/v2rayN/v2rayN" \
+	"$mountpoint/opt/v2rayN/AmazTool" \
+	"$mountpoint/opt/v2rayN/bin/xray/xray" \
+	"$mountpoint/opt/v2rayN/bin/sing_box/sing-box" \
+	"$mountpoint/opt/v2rayN/bin/mihomo/mihomo"
+ln -sfn /opt/v2rayN/v2rayN "$mountpoint/usr/local/bin/v2rayN"
+wechat_data_member=$(ar t "$wechat_archive" | grep -m1 '^data\.tar')
+ar p "$wechat_archive" "$wechat_data_member" | bsdtar -xpf - -C "$mountpoint"
+ln -sfn /opt/wechat/wechat "$mountpoint/usr/bin/wechat"
 cp -a "$overlay/." "$mountpoint/"
 chown -R root:root "$mountpoint/etc" "$mountpoint/usr/local" "$mountpoint/usr/share/alsa/ucm2/OnePlus"
 chmod 0600 "$mountpoint/etc/NetworkManager/system-connections/usb0.nmconnection"
@@ -167,6 +184,12 @@ for group in wheel video input render audio; do
 	"${op8_chroot[@]}" /usr/bin/getent group "$group" >/dev/null 2>&1 && \
 		"${op8_chroot[@]}" /usr/bin/usermod -aG "$group" "$user_name"
 done
+# The graphical SDDM greeter must be able to receive the touchscreen event node
+# before a user session exists (seat ACLs are not yet established).
+"${op8_chroot[@]}" /usr/bin/getent group input >/dev/null 2>&1 && \
+	"${op8_chroot[@]}" /usr/bin/usermod -aG input greeter
+"${op8_chroot[@]}" /usr/bin/getent group seat >/dev/null 2>&1 && \
+	"${op8_chroot[@]}" /usr/bin/usermod -aG seat greeter
 user_password=$(openssl rand -hex 8)
 printf '%s:%s\n' "$user_name" "$user_password" | "${op8_chroot[@]}" /usr/bin/chpasswd
 password_file="$op8_project/artifacts/arch-rootfs/INITIAL-USER-PASSWORD.txt"
@@ -182,7 +205,8 @@ packages_file="$op8_project/artifacts/arch-rootfs/packages.lock"
 sed -i 's/^#zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' "$mountpoint/etc/locale.gen"
 "${op8_chroot[@]}" /bin/bash /usr/bin/locale-gen
 "${op8_chroot[@]}" /usr/bin/systemctl enable \
-	NetworkManager systemd-resolved sshd greetd bluetooth ModemManager upower
+	NetworkManager systemd-resolved sshd sddm seatd bluetooth ModemManager upower
+"${op8_chroot[@]}" /usr/bin/systemctl disable greetd
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-bluetooth-setup.service
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-mark-slot-successful.timer
 "${op8_chroot[@]}" /usr/bin/systemctl enable op8-typec-monitor.service
@@ -206,6 +230,10 @@ packages_sha=$(sha256sum "$packages_file" | awk '{print $1}')
 	printf 'device_assets_commit=%s\n' "$OP8_DEVICE_ASSETS_COMMIT"
 	printf 'qbootctl_commit=%s\n' "$OP8_QBOOTCTL_COMMIT"
 	printf 'codex_cli_version=%s\n' "$codex_cli_version"
+	printf 'v2rayn_version=%s\n' "$OP8_V2RAYN_VERSION"
+	printf 'v2rayn_linux_arm64_sha256=%s\n' "$OP8_V2RAYN_LINUX_ARM64_SHA256"
+	printf 'wechat_version=%s\n' "$OP8_WECHAT_VERSION"
+	printf 'wechat_linux_arm64_sha256=%s\n' "$OP8_WECHAT_LINUX_ARM64_SHA256"
 	printf 'raw_sha256=%s\n' "$raw_sha"
 	printf 'sparse_sha256=%s\n' "$sparse_sha"
 	printf 'packages_lock_sha256=%s\n' "$packages_sha"

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=v2rayN
+Comment=Proxy client supporting Xray, sing-box and Mihomo
+Comment[zh_CN]=支持 Xray、sing-box 和 Mihomo 的代理客户端
+Exec=/opt/v2rayN/v2rayN
+Path=/opt/v2rayN
+Icon=/opt/v2rayN/v2rayN.png
+Terminal=false
+Categories=Network;
+StartupNotify=true

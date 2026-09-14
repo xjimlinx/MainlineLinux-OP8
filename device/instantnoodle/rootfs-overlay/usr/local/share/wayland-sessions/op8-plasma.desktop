@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Plasma Desktop
+Name[zh_CN]=Plasma（桌面模式）
+Comment=KDE Plasma Desktop for OnePlus 8
+Exec=/usr/local/bin/op8-plasma-session desktop
+TryExec=/usr/bin/startplasma-wayland
+Type=Application
+DesktopNames=KDE

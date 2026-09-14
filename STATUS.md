@@ -1,5 +1,38 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-13
 
+## SDDM touch login
+
+SDDM 0.21 的 OP8-Breeze QML greeter 已替换为默认登录器，`qt6-virtualkeyboard` 已安装，
+因此锁屏/登录界面可直接触摸输入密码，并能从会话菜单选择 Plasma Mobile 或 Plasma
+Desktop。SDDM greeter 当前固定使用 X11 以避开手机上仍属实验性的 Wayland greeter；登录后
+两个 Plasma 会话仍通过 KWin Wayland 启动。没有独立的“SDDM Mobile”软件包，手机布局由
+Plasma Mobile 会话和 SDDM QML 主题提供。OP8-Breeze 将 Qt 缩放设为 2 倍，并在
+密码框获得焦点后自动打开虚拟键盘；键盘可覆盖屏幕底部，但会话选择入口仍保留在键盘上方。
+
+2026-09-14 13:45 重新启动后运行内核为 `7.2.5-op8-mainline #9`；KMS 抓帧显示登录器
+颜色正常，启动日志也未再出现 `dsi_err_worker: status=5`。
+
+## 2026-09-14 A 槽持久启动
+
+IN2010 已从 A 槽的 `boot_a` 正常启动 `7.2.5-op8-mainline`，不是
+`fastboot boot` 临时启动。启动参数确认 `androidboot.slot_suffix=_a` 和
+`androidboot.mode=normal`；`qbootctl` 已将 A 槽标为 active、successful、bootable，
+因此 A/B 的 7 次重试计数不会继续递减。
+
+原始 22,642,688 字节 boot image 直接写入分区时缺少 AVB footer，是此前 ABL 正常
+启动返回 fastboot 的原因。实际刷入的是按 96 MiB `boot_a` 分区尺寸添加
+`Algorithm: NONE` hash footer 后的镜像，同时使用 flags=3 的 AOSP 17 IN2010
+`vbmeta_a`。完整命令、产物 SHA-256 和恢复说明见
+[`docs/PERSISTENT-BOOT-A.md`](docs/PERSISTENT-BOOT-A.md)。
+
+已修复：主线内核加入 Kona 的 `qcom,pshold` 节点（`0x0c264000`）、禁用 PM8009 重复
+reboot-mode 注册，并移植 Qualcomm SCM `DEASSERT_PS_HOLD` 调用。真机日志确认
+`secure PS_HOLD deassertion available`，普通 `sudo reboot` 已自动回到 A 槽 Linux。
+AMB655UV01 面板上电序列在 vendor 解锁和 normal mode 后各加入一次 DCS
+`EXIT_INVERT_MODE (0x20)`，清理 warm reboot 后可能残留的反色状态。提交为
+`527a6d9f3d1bd1c69f5239fa877cd43d16a47249`；完整 AVB 镜像已恢复并刷入 A 槽，
+设备当前画面已由用户确认正常。
+
 ## Plasma Mobile configuration crash workaround
 
 On Plasma Mobile 6.7.5 with Qt 6.11.2, opening the Folio desktop configuration

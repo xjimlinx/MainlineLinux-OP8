@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Plasma Mobile
+Name[zh_CN]=Plasma Mobile（手机模式）
+Comment=KDE Plasma Mobile for OnePlus 8
+Exec=/usr/local/bin/op8-plasma-session mobile
+TryExec=/usr/bin/startplasmamobile
+Type=Application
+DesktopNames=KDE
