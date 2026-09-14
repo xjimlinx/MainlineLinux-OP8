@@ -11,6 +11,7 @@
 - 版本：`3.2.32-52194`，架构：`arm64`
 - 当前状态：已安装到手机 `/opt/QQ`，版本 `3.2.32-52194`。
 - 验证结果：`/opt/QQ/qq` 是 `ELF 64-bit LSB pie executable, ARM aarch64`；`ldd` 未报告缺失共享库；`/usr/share/applications/qq.desktop` 已安装。
+- 图形界面登录验证：不在无 `DISPLAY/WAYLAND` 的 SSH 会话中强行启动 Electron；应从 Plasma 应用菜单点击 QQ 验证窗口和登录流程。
 
 Arch Linux 不使用 `dpkg` 管理 Debian 包。安装时先用 `pacman` 补齐运行库，再把该包的数据归档解到系统中，随后检查 ARM64 ELF 和桌面启动项。安装结果必须用手机上的 `file`、`pacman -Q` 和启动命令验证。
 
