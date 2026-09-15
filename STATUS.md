@@ -1,5 +1,14 @@
 # Linux 7.2.5 running on OnePlus 8 IN2010 — 2026-09-14
 
+> 2026-09-15：用户确认不接 USB 的卡住过程，只插线、不重启便立即继续。
+> 已定位并删除早期 `/init` 向未连接的 `ttyGS0` 同步写入而无限等待的路径；
+> 新 A 槽镜像接线启动约 14 秒、读回哈希一致，A 槽 successful=1。
+> 用户随后拔线、完全关机，仅按电源键开机，确认直接进入 Linux；
+> **一次 USB-free 冷启动通过**，多轮可靠性回归仍待做。下文旧的
+> “正常启动”记录不能当作该验收。
+> 隔离证据及刷写记录见
+> [`docs/NOSLPI-BOOT.md`](docs/NOSLPI-BOOT.md)。
+
 应用部署记录（QQ / Steam / WPS / Blender / OBS）见 [`docs/APP-DEPLOYMENT.md`](docs/APP-DEPLOYMENT.md)。QQ 与 WPS 365 ARM64 已部署；Steam、Blender、OBS 的架构限制与后续方案已记录。
 
 ## 基带 PCIe 已屏蔽

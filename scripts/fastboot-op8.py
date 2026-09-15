@@ -11,10 +11,14 @@ import time
 
 P = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('action', choices=('inspect', 'boot', 'flash-recovery',
-                                      'restore-recovery', 'flash-arch-userdata'))
+parser.add_argument('action', choices=('inspect', 'boot', 'flash-boot-a',
+                                      'flash-noslpi-a',
+                                      'flash-recovery', 'restore-recovery',
+                                      'flash-arch-userdata'))
 parser.add_argument('--variant', choices=('diagnostic', 'storage-probe', 'arch'), default='diagnostic')
 parser.add_argument('--serial', help='Required when multiple devices exist')
+parser.add_argument('--reboot', action='store_true',
+                    help='Reboot after a successful persistent boot_a flash')
 parser.add_argument('--capture-timeout', type=int, default=120,
                     help='Seconds to wait for diagnostic ttyACM after temporary boot')
 args = parser.parse_args()
@@ -48,6 +52,99 @@ if slot not in ('a', 'b'):
 print(json.dumps({'serial': serial, 'product': product, 'unlocked': unlocked,
                   'current_slot': slot, 'is_userspace': userspace}, indent=2))
 if args.action == 'inspect':
+    raise SystemExit(0)
+
+if args.action == 'flash-noslpi-a':
+    if userspace.lower() == 'yes':
+        sys.exit('Persistent boot flashing requires bootloader fastboot, not fastbootd.')
+    if product != 'kona':
+        sys.exit(f'Refusing non-SM8250 product: {product}')
+    partition_size = var('partition-size:boot_a')
+    try:
+        if int(partition_size, 0) != 96 * 1024 * 1024:
+            sys.exit(f'Unexpected boot_a size: {partition_size}')
+    except ValueError:
+        sys.exit(f'Cannot parse boot_a size: {partition_size}')
+    boot_art = P / 'artifacts/boot-images/noslpi'
+    boot = boot_art / 'boot-in2010-noslpi-avb.img'
+    manifest_path = boot_art / 'manifest.json'
+    if not boot.is_file() or not manifest_path.is_file():
+        sys.exit('Noslpi persistent artifact or its manifest is missing.')
+    manifest = json.loads(manifest_path.read_text())
+    expected_boot = manifest.get('persistent_boot_sha256')
+    actual_boot = hashlib.file_digest(boot.open('rb'), 'sha256').hexdigest()
+    if actual_boot != expected_boot:
+        sys.exit(f'Noslpi boot hash mismatch: {actual_boot} != {expected_boot}')
+    if boot.stat().st_size != 96 * 1024 * 1024:
+        sys.exit(f'Noslpi boot image has wrong size: {boot.stat().st_size}')
+    avb_info = subprocess.run(['avbtool', 'info_image', '--image', str(boot)],
+                              check=True, text=True, capture_output=True).stdout
+    if ('Image size:               100663296 bytes' not in avb_info or
+            'Partition Name:        boot' not in avb_info):
+        sys.exit('Noslpi persistent image failed AVB footer validation.')
+    vbmeta = P.parent / 'AOSP-OP8/out/target/product/instantnoodle/vbmeta.img'
+    expected_vbmeta = '1240bb219395fc0ceb0df56e61cab5a00aed72607479fc42867c08dfd11b93d0'
+    if not vbmeta.is_file():
+        sys.exit(f'Missing AOSP vbmeta image: {vbmeta}')
+    actual_vbmeta = hashlib.file_digest(vbmeta.open('rb'), 'sha256').hexdigest()
+    if actual_vbmeta != expected_vbmeta:
+        sys.exit(f'vbmeta hash mismatch: {actual_vbmeta} != {expected_vbmeta}')
+    print(f'Writing only vbmeta_a and boot_a for noslpi; boot={actual_boot}')
+    subprocess.run(base + ['flash', 'vbmeta_a', str(vbmeta)], check=True)
+    subprocess.run(base + ['flash', 'boot_a', str(boot)], check=True)
+    subprocess.run(base + ['set_active', 'a'], check=True)
+    print('Noslpi A-slot image installed; boot_b and userdata were not touched.')
+    if args.reboot:
+        subprocess.run(base + ['reboot'], check=True)
+    else:
+        print('Not rebooting automatically (pass --reboot after reviewing the flash output).')
+    raise SystemExit(0)
+
+if args.action == 'flash-boot-a':
+    if userspace.lower() == 'yes':
+        sys.exit('Persistent boot flashing requires bootloader fastboot, not fastbootd.')
+    if product != 'kona':
+        sys.exit(f'Refusing non-SM8250 product: {product}')
+    partition_size = var('partition-size:boot_a')
+    try:
+        if int(partition_size, 0) != 96 * 1024 * 1024:
+            sys.exit(f'Unexpected boot_a size: {partition_size}')
+    except ValueError:
+        sys.exit(f'Cannot parse boot_a size: {partition_size}')
+
+    boot_art = P / 'artifacts/linux-7.2.5-op8'
+    boot = boot_art / 'persistent/boot-in2010-linux-7.2.5-avb.img'
+    manifest = json.loads((boot_art / 'boot-manifest.json').read_text())
+    expected_boot = manifest.get('persistent_boot_sha256')
+    if not expected_boot or not boot.is_file():
+        sys.exit('Persistent 7.2.5 AVB artifact or its manifest entry is missing.')
+    actual_boot = hashlib.file_digest(boot.open('rb'), 'sha256').hexdigest()
+    if actual_boot != expected_boot:
+        sys.exit(f'Persistent boot hash mismatch: {actual_boot} != {expected_boot}')
+    if boot.stat().st_size != 96 * 1024 * 1024:
+        sys.exit(f'Persistent boot image has wrong size: {boot.stat().st_size}')
+    avb_info = subprocess.run(['avbtool', 'info_image', '--image', str(boot)],
+                              check=True, text=True, capture_output=True).stdout
+    if ('Image size:               100663296 bytes' not in avb_info or
+            'Partition Name:        boot' not in avb_info):
+        sys.exit('Persistent boot image failed AVB footer validation.')
+
+    vbmeta = P.parent / 'AOSP-OP8/out/target/product/instantnoodle/vbmeta.img'
+    expected_vbmeta = '1240bb219395fc0ceb0df56e61cab5a00aed72607479fc42867c08dfd11b93d0'
+    if not vbmeta.is_file():
+        sys.exit(f'Missing AOSP vbmeta image: {vbmeta}')
+    actual_vbmeta = hashlib.file_digest(vbmeta.open('rb'), 'sha256').hexdigest()
+    if actual_vbmeta != expected_vbmeta:
+        sys.exit(f'vbmeta hash mismatch: {actual_vbmeta} != {expected_vbmeta}')
+    print(f'Writing only vbmeta_a and boot_a on unlocked IN2010; boot={actual_boot}')
+    subprocess.run(base + ['flash', 'vbmeta_a', str(vbmeta)], check=True)
+    subprocess.run(base + ['flash', 'boot_a', str(boot)], check=True)
+    subprocess.run(base + ['set_active', 'a'], check=True)
+    print('A-slot persistent boot image installed; boot_b and userdata were not touched.')
+    if args.reboot:
+        subprocess.run(base + ['reboot'], check=True)
+    else:
+        print('Not rebooting automatically (pass --reboot after reviewing the flash output).')
     raise SystemExit(0)
 
 artifact = P / 'artifacts/boot-images' / args.variant

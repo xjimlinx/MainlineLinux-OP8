@@ -15,35 +15,43 @@ case " $(cat /proc/cmdline) " in
     *) fail 'missing explicit op8.arch=1 command line' ;;
 esac
 
-# The validated 6.16.7 kernel has libcomposite, ACM and NCM built in.  Keep
-# compatibility with older modular test kernels, but do not fail when the
-# functions are already built into vmlinux.
-for module in libcomposite u_serial usb_f_acm usb_f_ncm; do
-    [ ! -f "/modules/$module.ko" ] || insmod "/modules/$module.ko" || \
-        fail "module load failed: $module"
-done
-mkdir -p /sys/kernel/config
-mount -t configfs configfs /sys/kernel/config || fail 'configfs mount failed'
-g=/sys/kernel/config/usb_gadget/op8arch
-mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" \
-    "$g/functions/acm.usb0" "$g/functions/ncm.usb0"
-echo 0x0525 >"$g/idVendor"; echo 0xa4a7 >"$g/idProduct"; echo 0x0200 >"$g/bcdUSB"
-echo op8-arch-prototype >"$g/strings/0x409/serialnumber"
-echo 'Local bring-up experiment' >"$g/strings/0x409/manufacturer"
-echo 'OP8 Arch Linux ARM' >"$g/strings/0x409/product"
-echo 'CDC ACM console and NCM network' >"$g/configs/c.1/strings/0x409/configuration"
-echo 100 >"$g/configs/c.1/MaxPower"
-ln -s "$g/functions/acm.usb0" "$g/configs/c.1/acm.usb0"
-ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/ncm.usb0"
-udc=
-tries=0
-while [ "$tries" -lt 60 ]; do
-    for p in /sys/class/udc/*; do [ ! -e "$p" ] || { udc=${p##*/}; break; }; done
-    [ -z "$udc" ] || break
-    tries=$((tries + 1)); sleep 1
-done
-[ -n "$udc" ] || fail 'no USB device controller'
-echo "$udc" >"$g/UDC" || fail 'cannot bind USB ACM gadget'
+usb_setup() {
+    for module in libcomposite u_serial usb_f_acm usb_f_ncm; do
+        [ ! -f "/modules/$module.ko" ] || insmod "/modules/$module.ko" || {
+            log "USB module load failed: $module"
+            return 1
+        }
+    done
+    mkdir -p /sys/kernel/config || return 1
+    mount -t configfs configfs /sys/kernel/config || {
+        log 'USB configfs mount failed'
+        return 1
+    }
+    g=/sys/kernel/config/usb_gadget/op8arch
+    mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" \
+        "$g/functions/acm.usb0" "$g/functions/ncm.usb0" || return 1
+    echo 0x0525 >"$g/idVendor" || return 1
+    echo 0xa4a7 >"$g/idProduct" || return 1
+    echo 0x0200 >"$g/bcdUSB" || return 1
+    echo op8-arch-prototype >"$g/strings/0x409/serialnumber" || return 1
+    echo 'Local bring-up experiment' >"$g/strings/0x409/manufacturer" || return 1
+    echo 'OP8 Arch Linux ARM' >"$g/strings/0x409/product" || return 1
+    echo 'CDC ACM console and NCM network' >"$g/configs/c.1/strings/0x409/configuration" || return 1
+    echo 100 >"$g/configs/c.1/MaxPower" || return 1
+    ln -s "$g/functions/acm.usb0" "$g/configs/c.1/acm.usb0" || return 1
+    ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/ncm.usb0" || return 1
+    udc=
+    tries=0
+    while [ "$tries" -lt 5 ]; do
+        for p in /sys/class/udc/*; do [ ! -e "$p" ] || { udc=${p##*/}; break; }; done
+        [ -z "$udc" ] || break
+        tries=$((tries + 1)); sleep 1
+    done
+    [ -n "$udc" ] || { log 'USB device controller unavailable'; return 1; }
+    echo "$udc" >"$g/UDC" || { log "USB gadget bind failed: $udc"; return 1; }
+    log "USB ACM/NCM bound to $udc"
+}
+usb_setup || log 'USB gadget unavailable; continuing to labelled Arch rootfs'
 
 rootdev=
 tries=0
@@ -60,6 +68,20 @@ log "selected root=$rootdev by exact filesystem label"
 mkdir -p /newroot
 mount -t ext4 -o rw,noatime "$rootdev" /newroot || fail 'root mount failed'
 [ -x /newroot/sbin/init ] || fail 'root has no executable /sbin/init'
+persist_step() {
+    procdir=/proc
+    [ ! -r /newroot/proc/uptime ] || procdir=/newroot/proc
+    read uptime _ <"$procdir/uptime"
+    bootid=$(cat "$procdir/sys/kernel/random/boot_id")
+    kmsg=/dev/kmsg
+    [ ! -c /newroot/dev/kmsg ] || kmsg=/newroot/dev/kmsg
+    printf '<6>OP8ARCH: boot=%s uptime=%s step=%s\n' "$bootid" "$uptime" "$1" >"$kmsg"
+    printf 'boot=%s uptime=%s step=%s\n' "$bootid" "$uptime" "$1" \
+        >>/newroot/var/log/op8-early-boot.log
+    sync
+}
+persist_step root-mounted
 for dir in dev proc sys run; do mkdir -p "/newroot/$dir"; mount --move "/$dir" "/newroot/$dir" || fail "move $dir failed"; done
-echo 'Arch root verified; switching to systemd. Login on ttyGS0.' >/newroot/dev/ttyGS0 2>/dev/null || true
+persist_step mounts-moved
+persist_step switch-root
 exec switch_root /newroot /sbin/init

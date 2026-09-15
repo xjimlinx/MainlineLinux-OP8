@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+/*
+ * OnePlus 8 cold-boot isolation variant.
+ *
+ * This includes the full instantnoodle board description and changes only
+ * the SLPI remoteproc state.  It deliberately keeps UFS, display, USB, Wi-Fi
+ * and ADSP as in the normal mainline target so it is useful as a persistent
+ * boot test rather than as the headless diagnostic DTB.
+ */
+/dts-v1/;
+#include "sm8250-oneplus-instantnoodle.dts"
+
+&slpi {
+	status = "disabled";
+};
